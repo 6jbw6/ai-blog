@@ -1,0 +1,120 @@
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+
+const routes: RouteRecordRaw[] = [
+  // 前台门户路由
+  {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/portal/Home.vue'),
+    meta: { title: '首页 - AI-Blog 知识库系统' }
+  },
+  {
+    path: '/article/:idOrSlug',
+    name: 'ArticleDetail',
+    component: () => import('@/views/portal/ArticleDetail.vue'),
+    meta: { title: '文章详情 - AI-Blog' }
+  },
+  {
+    path: '/categories',
+    name: 'Categories',
+    component: () => import('@/views/portal/Categories.vue'),
+    meta: { title: '分类与标签体系 - AI-Blog' }
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/auth/Login.vue'),
+    meta: { title: '用户登录 - AI-Blog' }
+  },
+
+  // 后台管理路由 (RBAC 权限守卫)
+  {
+    path: '/admin',
+    component: () => import('@/views/admin/AdminLayout.vue'),
+    redirect: '/admin/dashboard',
+    meta: { requiresAdmin: true },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'AdminDashboard',
+        component: () => import('@/views/admin/Dashboard.vue'),
+        meta: { title: '运营看板 - 管理后台' }
+      },
+      {
+        path: 'articles',
+        name: 'AdminArticles',
+        component: () => import('@/views/admin/ArticleList.vue'),
+        meta: { title: '文章管理 - 管理后台' }
+      },
+      {
+        path: 'article/new',
+        name: 'AdminArticleNew',
+        component: () => import('@/views/admin/ArticleEdit.vue'),
+        meta: { title: '发布博文 (AI写作) - 管理后台' }
+      },
+      {
+        path: 'article/edit/:id',
+        name: 'AdminArticleEdit',
+        component: () => import('@/views/admin/ArticleEdit.vue'),
+        meta: { title: '编辑博文 - 管理后台' }
+      },
+      {
+        path: 'categories-tags',
+        name: 'AdminCategoryTag',
+        component: () => import('@/views/admin/CategoryTagManage.vue'),
+        meta: { title: '分类与标签运维 - 管理后台' }
+      },
+      {
+        path: 'comments',
+        name: 'AdminComments',
+        component: () => import('@/views/admin/CommentManage.vue'),
+        meta: { title: '评论审核 - 管理后台' }
+      },
+      {
+        path: 'ai-settings',
+        name: 'AdminAiSettings',
+        component: () => import('@/views/admin/AiSettings.vue'),
+        meta: { title: 'AI 引擎设置 - 管理后台' }
+      }
+    ]
+  },
+
+  // 404 回退
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior() {
+    return { top: 0 }
+  }
+})
+
+// 企业级 RBAC 路由守卫拦截
+router.beforeEach((to, _from, next) => {
+  if (to.meta.title) {
+    document.title = to.meta.title as string
+  }
+
+  const userStore = useUserStore()
+
+  // 检查是否需要管理员权限
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  if (requiresAdmin) {
+    if (!userStore.isLoggedIn || !userStore.isAdmin) {
+      ElMessage.warning('权限不足：请先以管理员身份登录系统')
+      next({ name: 'Login' })
+      return
+    }
+  }
+
+  next()
+})
+
+export default router

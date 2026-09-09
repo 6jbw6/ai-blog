@@ -1,0 +1,133 @@
+import json
+from typing import List, Dict, Any
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.core.response import Result, BusinessException
+from app.api.deps import require_admin
+from app.schemas.ai import (
+    AiAskRequest,
+    AiSummaryRequest,
+    AiSummaryResponse,
+    SemanticSearchRequest,
+    SemanticSearchResultItem,
+    LlmConfigSchema
+)
+from app.ai_engine.rag_service import rag_service
+from app.core.config import settings
+
+router = APIRouter(prefix="/ai", tags=["AI 算法与大模型知识库 (AI Core)"])
+
+
+@router.post("/ask", summary="博主 AI 数字分身 / RAG 知识库问答 (全链路 SSE 流式交互)")
+async def ask_knowledge_base(
+    payload: AiAskRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    全链路 SSE (Server-Sent Events) 打字机流式交互接口
+    
+    请求参数:
+    - question: 读者提问
+    - history: 多轮历史对话
+    
+    响应格式:
+    - text/event-stream 协议包
+    - data: {"type": "token", "content": "..."}
+    - data: {"type": "citations", "citations": [...]}  (知识库来源溯源直达卡片)
+    - data: {"type": "done"}
+    """
+    history_dicts = [{"role": h.role, "content": h.content} for h in payload.history]
+
+    # 生成异步 SSE 生成器
+    stream_generator = rag_service.stream_rag_chat(
+        db=db,
+        question=payload.question,
+        history=history_dicts
+    )
+
+    return StreamingResponse(
+        stream_generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "X-Accel-Buffering": "no"  # 禁用 Nginx 等中间代理缓冲，确保低延迟秒级推送
+        }
+    )
+
+
+@router.post("/summary", response_model=Result[AiSummaryResponse], summary="AI 自动生成文章 TL;DR 摘要与推荐标签")
+async def generate_ai_summary(payload: AiSummaryRequest):
+    """供后台博文创作工作台调用：一键智能压缩长文为核心要点并预测分类标签"""
+    data = await rag_service.llm.generate_summary_and_tags(payload.content, payload.title or "")
+    return Result.success(data=AiSummaryResponse(**data))
+
+
+@router.post("/semantic-search", response_model=Result[List[SemanticSearchResultItem]], summary="基于向量余弦相似度的自然语言语义检索")
+def semantic_search(
+    payload: SemanticSearchRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    突破传统数据库 LIKE 关键字字面匹配局限
+    即便没有输入相同词眼，也能基于特征向量余弦相似度召回语义最贴近的技术博文
+    """
+    results = rag_service.semantic_search(db=db, query=payload.query, top_k=payload.top_k)
+    items = [SemanticSearchResultItem(**r) for r in results]
+    return Result.success(data=items)
+
+
+@router.post("/reindex-all", response_model=Result[Dict[str, int]], summary="全量重建博文 RAG 向量知识库 (管理员)")
+def reindex_all_articles(
+    db: Session = Depends(get_db),
+    _admin = Depends(require_admin)
+):
+    result = rag_service.reindex_all_articles(db)
+    return Result.success(data=result, message="全量向量切片与索引重构完成")
+
+
+@router.get("/config", response_model=Result[LlmConfigSchema], summary="获取当前大模型与 RAG 运行参数")
+def get_ai_config():
+    # 对 API Key 进行安全掩码脱敏
+    masked_key = ""
+    if settings.LLM_API_KEY:
+        masked_key = settings.LLM_API_KEY[:4] + "****" + settings.LLM_API_KEY[-4:] if len(settings.LLM_API_KEY) > 8 else "****"
+
+    config_data = LlmConfigSchema(
+        provider=settings.LLM_PROVIDER,
+        api_key=masked_key,
+        base_url=settings.LLM_BASE_URL,
+        model=settings.LLM_MODEL,
+        top_k=settings.RAG_TOP_K,
+        similarity_threshold=settings.RAG_SIMILARITY_THRESHOLD
+    )
+    return Result.success(data=config_data)
+
+
+@router.put("/config", response_model=Result[None], summary="动态配置大模型 API 与 RAG 策略 (管理员)")
+def update_ai_config(
+    payload: LlmConfigSchema,
+    _admin = Depends(require_admin)
+):
+    """支持在线热切换大模型接入商 (DeepSeek/智谱/OpenAI/本地Mock)"""
+    settings.LLM_PROVIDER = payload.provider
+    if payload.api_key and not payload.api_key.startswith("****"):
+        settings.LLM_API_KEY = payload.api_key
+    if payload.base_url:
+        settings.LLM_BASE_URL = payload.base_url
+    if payload.model:
+        settings.LLM_MODEL = payload.model
+    settings.RAG_TOP_K = payload.top_k
+    settings.RAG_SIMILARITY_THRESHOLD = payload.similarity_threshold
+
+    # 同步更新运行时 LLM 客户端
+    rag_service.llm = rag_service.llm.__class__(
+        provider=settings.LLM_PROVIDER,
+        api_key=settings.LLM_API_KEY,
+        base_url=settings.LLM_BASE_URL,
+        model=settings.LLM_MODEL
+    )
+    return Result.success(message="大模型与 RAG 运行时配置已更新生效")
