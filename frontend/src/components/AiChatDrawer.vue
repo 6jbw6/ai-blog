@@ -64,7 +64,7 @@
               @click="sendQuickQuestion(q)"
             >
               <span class="hot-badge">✦</span>
-              <span class="quick-text">{{ q }}</span>
+              <span class="quick-text" v-html="renderPromptMath(q)"></span>
             </button>
           </div>
         </div>
@@ -84,8 +84,8 @@
 
           <div class="message-bubble-wrapper">
             <div class="message-bubble">
-              <!-- 用户消息直接渲染纯文本，杜绝 Markdown 的 <p> 标签产生顶部 1em 冗余空行 -->
-              <div v-if="msg.role === 'user'" class="user-text-content">{{ msg.content }}</div>
+              <!-- 用户消息原生对齐，杜绝 Markdown 的 <p> 标签产生顶部 1em 冗余空行，同时支持 KaTeX 数学公式 -->
+              <div v-if="msg.role === 'user'" class="user-text-content" v-html="renderUserMessage(msg.content)"></div>
 
               <!-- Assistant 消息 -->
               <template v-else>
@@ -165,6 +165,8 @@
 import { ref, watch, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import { useAiChatStore } from '@/stores/aiChat'
 import { useUserStore } from '@/stores/user'
 import { streamRagChat, getRecommendedQuestionsApi } from '@/api/ai'
@@ -189,11 +191,49 @@ interface ChatMsg {
 const messages = ref<ChatMsg[]>([])
 
 const defaultPrompts = [
-  'Transformer 自注意力为什么要除以 sqrt(d_k)？',
+  'Transformer 自注意力为什么要除以 $\\sqrt{d_k}$？',
   '显存不够怎么微调大语言模型？',
   '多路召回相比单一向量检索有什么优势？',
   'LoRA 微调为什么在推理阶段零延迟？'
 ]
+
+// 渲染推荐按钮中的数学公式与开根号符号 (支持 $\sqrt{d_k}$ 或兼容 sqrt(d_k))
+const renderPromptMath = (text: string): string => {
+  if (!text) return ''
+  let normalized = text.replace(/(?<![a-zA-Z0-9_\$\\])sqrt\(([a-zA-Z0-9_]+)\)/g, '$\\sqrt{$1}$')
+  normalized = normalized.replace(/(?<![\$\\])\\sqrt\{([^}]+)\}(?!\$)/g, '$\\sqrt{$1}$')
+  return normalized.replace(/\$([^\$\n]+?)\$/g, (_, math) => {
+    try {
+      return katex.renderToString(math.trim(), {
+        displayMode: false,
+        throwOnError: false
+      })
+    } catch {
+      return math
+    }
+  })
+}
+
+// 渲染用户提问消息气泡中的公式与特殊字符 (保持无顶部空行的同时支持 LaTeX)
+const renderUserMessage = (text: string): string => {
+  if (!text) return ''
+  let safe = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  let normalized = safe.replace(/(?<![a-zA-Z0-9_\$\\])sqrt\(([a-zA-Z0-9_]+)\)/g, '$\\sqrt{$1}$')
+  normalized = normalized.replace(/(?<![\$\\])\\sqrt\{([^}]+)\}(?!\$)/g, '$\\sqrt{$1}$')
+  return normalized.replace(/\$([^\$\n]+?)\$/g, (_, math) => {
+    try {
+      return katex.renderToString(math.trim(), {
+        displayMode: false,
+        throwOnError: false
+      })
+    } catch {
+      return math
+    }
+  })
+}
 
 const allPrompts = ref<string[]>([])
 const displayedPrompts = ref<string[]>([...defaultPrompts])
@@ -602,6 +642,16 @@ const handleSend = async () => {
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.user-text-content :deep(.katex) {
+  font-size: 1.05em;
+  color: #ffffff;
+}
+
+.quick-tag :deep(.katex) {
+  font-size: 0.95em;
+  color: inherit;
 }
 
 /* 助手回复气泡 */

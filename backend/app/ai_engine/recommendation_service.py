@@ -7,7 +7,7 @@ from app.models.search_log import SearchLog
 from app.models.article import Article
 
 FALLBACK_PROMPTS = [
-    "Transformer 自注意力为什么要除以 sqrt(d_k)？",
+    "Transformer 自注意力为什么要除以 $\\sqrt{d_k}$？",
     "多路召回 (Hybrid Search) 相比单一向量检索有什么优势？",
     "显存不够时如何基于 LoRA / QLoRA 微调大语言模型？",
     "LoRA 微调权重合并后为什么在推理阶段零延迟？",

@@ -100,6 +100,18 @@ const renderedHtml = computed(() => {
     return `%%%KATEX_BLOCK_${id}%%%`
   })
 
+  // 1.5 智能兼容归一化：将文本中未包裹 $ 的 LaTeX 开根号或伪代码 (如 \sqrt{d_k} 或 sqrt(d_k)) 自动转为 KaTeX 行内公式
+  text = text.replace(/(?<![\$\\])\\sqrt\{([^}]+)\}(?!\$)/g, (_, math) => {
+    const id = inlineMaths.length
+    inlineMaths.push(`\\sqrt{${math.trim()}}`)
+    return `%%%KATEX_INLINE_${id}%%%`
+  })
+  text = text.replace(/(?<![a-zA-Z0-9_\$\\])sqrt\(([a-zA-Z0-9_]+)\)(?!\$)/g, (_, math) => {
+    const id = inlineMaths.length
+    inlineMaths.push(`\\sqrt{${math.trim()}}`)
+    return `%%%KATEX_INLINE_${id}%%%`
+  })
+
   // 2. 保护行内数学公式 $...$
   text = text.replace(/(?<!\$)\$([^\$\n]+?)\$(?!\$)/g, (_, math) => {
     const id = inlineMaths.length
