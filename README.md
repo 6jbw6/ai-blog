@@ -59,6 +59,7 @@
 - **RBAC 双角色权限体系**：JWT 无状态 Token 鉴权、Bcrypt 加盐安全哈希密码、路由守卫拦截。
 - **Vue 3 + TypeScript 强类型前端**：Element Plus 组件库、Pinia 状态管理、Vite 热重载与秒级编译。
 - **黑曜石与翡翠绿设计语言**：纯正 Obsidian (`#18181b`) 与 Emerald Green (`#059669` / `#10b981`) 配色，零紫色杂色，高对比度视觉质感。
+- **界面文案缩写与本地化规范**：彻底清除中文标题与表单项中形如 `(LLM Provider)`、`(Model ID)`、`(Pipeline)` 的生硬英译后缀；规范保留 `DeepSeek`、`OpenAI`、`API Key`、`Base URL` 等主流厂商与技术协议缩写。
 
 ---
 

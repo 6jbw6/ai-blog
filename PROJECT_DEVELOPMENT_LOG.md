@@ -4,7 +4,9 @@
 > **项目开发者**：博主（软件工程专业）  
 > **求职目标**：AI 算法工程师 / 大模型应用开发工程师（LLM Application / RAG / Agent Engineer）  
 > **核心技术栈**：Python 3.13 + FastAPI + MySQL 8.0 + Vue 3 + Vite + TypeScript + Pinia + Element Plus  
-> **视觉设计规范**：Obsidian Black & Emerald Green（黑曜石黑灰极简风 + 祖母绿翡翠点缀，严禁任何蓝紫色调）
+> **视觉设计规范**：Obsidian Black & Emerald Green（黑曜石黑灰极简风 + 祖母绿翡翠点缀，严禁任何蓝紫色调）  
+> **界面文案缩写规范**：彻底清除中文标题与表单项中的生硬英文括号注记（如 `(LLM Provider)`、`(Model ID)`、`(Pipeline)` 等）；规范保留权威模型厂商与通用协议缩写（如 `DeepSeek`、`OpenAI`、`API Key`、`Base URL` 等）  
+> **工程双日志守则**：进行任何开发与维护操作时，必须且必定同时同步更新 `PROJECT_DEVELOPMENT_LOG.md` 与 `README.md`
 
 ---
 
@@ -313,6 +315,7 @@ flowchart TD
 | **#21** | `2026-09-14 11:15` | 隐私脱敏合规与全站侵权隐患消除 | 全站真实姓名脱敏为“博主”及第三方商业品牌字眼彻底清退 (`PROJECT_DEVELOPMENT_LOG.md`, `README.md`, `Navbar.vue`, `index.html`, `seed_data.py`, `auth.py`, `schemas/user.py`, `.env.example`, MySQL全表) | 用户严格要求：“把项目中所有有贾博文3个字的都改为博主，进行脱敏，所有有火山引擎的字眼都删除，以后要保证不要出现侵权问题” | 1. **全库代码级姓名脱敏**：全站所有代码、注释、HTML 标题、播种数据、系统提示词中的姓名全量替换为中立合规的「博主」；<br>2. **数据库全表批量脱敏**：编写并执行数据修复脚本，对 MySQL 中的 `users` (username/nickname)、`comments`、`articles`、`search_logs`、`ai_chat_messages` 全量更新，彻底清退明文；<br>3. **多凭证兼容鉴权与短用户名放行**：调整 `schemas/user.py` 的 `min_length=1`，兼容 2 字符中文名「博主」；优化 `auth.py` 登录查询逻辑，全面支持输入「博主」、用户邮箱或管理员身份兼容登入，保障后台管理顺畅无阻；<br>4. **第三方品牌与侵权隐患清退**：全面清退项目内所有“火山引擎”等商业品牌字眼，重命名前端 `volcano-search-capsule` 为中立的 `nav-search-capsule`，环境示例更新为通用标准；<br>5. 自动化脚本递归扫描全盘 0 残留，接口三凭证测试 100% 成功，`npm run build` 1.16s 零报错通过验证。 | ✅ 已解决 |
 | **#22** | `2026-09-14 11:32` | 交互体验与安全显示优化 | 按钮加载旋转圈唯一化与管理员 API Key 真实回显及眼睛切换显隐纠偏 (`AiSettings.vue`, `ai_assistant.py`, `PROJECT_DEVELOPMENT_LOG.md`, `README.md`) | 用户截图反馈：“点拉取时前面的圈转就可以了，不用增加新的圈转，然后点击apikey具体内容时显示不对” | 1. **拉取按钮加载圈唯一化**：剥离 `el-button` 默认 `:loading` 属性所注入的冗余加载圆圈，改用 `:disabled` 配合前置 `<Refresh />` 图标专属 `.is-spinning` 匀速旋转动画，实现仅前置圆圈旋转，界面干净无跳动；<br>2. **API Key 真实值回显与查看纠偏**：排查发现后端此前下发 `sk-7****47Tm` 脱敏字符串，导致密码输入框点击眼睛查看时直接显示星号字符而非真实密钥；现改造 `GET /api/v1/ai/config` 绑定 `require_admin` 鉴权安全回传真实 Key，结合输入框 `type="password" show-password` 达成“默认黑圆点、点击眼睛即可查看真实完整密钥”的标准交互；<br>3. 保存逻辑增加防篡改防御，自动化端到端测试与 `npm run build` 1.38s 零报错验证通过。 | ✅ 已解决 |
 | **#23** | `2026-09-14 11:42` | 界面冗余英文缩写清理与行业品牌保留 | 清理界面中 `(LLM Provider)`、`(Provider)`、`(Model ID)`、`(RAG Indexing)`、`(Pipeline)`、`(Chunk Size)`、`RBAC` 等冗余括号英文缩写，保留 DeepSeek、OpenAI 等标准模型厂商缩写 (`AiSettings.vue`, `AdminLayout.vue`, `PROJECT_DEVELOPMENT_LOG.md`, `README.md`) | 用户明确要求：“自定义大模型服务接入 (LLM Provider)删除LLM Provider这种缩写，保留deepseek，openai这种缩写” | 1. **清理冗余括号英文注解**：全面清理后台标题与表单项中形如 `(LLM Provider)`、`(Provider)`、`(Model ID)`、`(RAG Indexing)`、`(Pipeline)`、`（Chunk Size）` 的技术英文注记，顶栏 `RBAC` 更新为「权限管理中枢」，界面更自然纯净；<br>2. **严格保留主流模型品牌与技术缩写**：在说明文案与输入占位符中规范保留 `DeepSeek`、`OpenAI`、`SiliconFlow` 等厂商名称，以及 `Base URL`、`API Key` 等工业标准接口参数名；<br>3. 前端重新打包构建 `npm run build` 1.03s 零报错，双端后台与前台服务顺利拉起。 | ✅ 已解决 |
+| **#24** | `2026-09-14 11:47` | 规范固化与工程约束生效 | 将「界面文案缩写清理与厂商名称保留规则」永久固化为全局编码开发规范 (`PROJECT_DEVELOPMENT_LOG.md`, `README.md`) | 用户明确指令：“这种缩写保留与清理规则要以后写代码也遵守” | 1. **规则永久入宪**：将文案规范上升为系统核心开发约束——以后所有新模块或迭代，坚决禁止在中文标签/标题中添加 `(LLM Provider)`、`(Model ID)` 等生硬英译后缀；<br>2. **行业品牌与标准协议规范放行**：对 `DeepSeek`、`OpenAI` 等知名厂商名，以及 `API Key`、`Base URL` 等行业通用术语按需精准保留；<br>3. 同步写入文档顶层规范与 README 设计规范章节，全流程严格执行。 | ✅ 已解决 |
 
 ---
 *本节持续随开发动作实时追加，确保全生命周期可回溯。*
