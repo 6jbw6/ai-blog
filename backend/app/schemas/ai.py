@@ -55,9 +55,14 @@ class SemanticSearchResultItem(BaseModel):
 
 
 class LlmConfigSchema(BaseModel):
-    provider: str = Field(..., description="mock | deepseek | zhipu | openai")
+    provider: str = Field(default="custom", description="自定义大模型接入商名称，例如：魔芯科技、DeepSeek、SiliconFlow、OpenAI 等")
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     model: Optional[str] = None
     top_k: int = 4
     similarity_threshold: float = 0.30
+
+
+class FetchModelsRequest(BaseModel):
+    base_url: str = Field(..., min_length=1, description="大模型 API Base URL 端点")
+    api_key: Optional[str] = Field(default=None, description="大模型 API Key (若留空或为脱敏掩码则使用后端当前存储的有效Key)")

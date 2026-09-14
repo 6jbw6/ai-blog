@@ -22,7 +22,8 @@ from app.schemas.ai import (
     SemanticSearchRequest,
     SemanticSearchResultItem,
     LlmConfigSchema,
-    AiChatMessageItem
+    AiChatMessageItem,
+    FetchModelsRequest
 )
 from app.ai_engine.rag_service import rag_service
 from app.ai_engine.recommendation_service import record_search_query, get_dynamic_recommended_questions
@@ -250,3 +251,50 @@ def update_ai_config(
         model=settings.LLM_MODEL
     )
     return Result.success(message="大模型与 RAG 运行时配置已更新生效")
+
+
+@router.post("/models", response_model=Result[List[str]], summary="在线拉取指定端点支持的模型列表 (管理员)")
+async def fetch_available_models(
+    payload: FetchModelsRequest,
+    _admin = Depends(require_admin)
+):
+    """
+    通过 OpenAI 兼容协议向供应商端点动态拉取支持的模型 ID 清单
+    """
+    base_url = payload.base_url.strip().rstrip("/")
+    api_key = payload.api_key.strip() if payload.api_key else ""
+
+    # 若未传 key 或传入掩码，使用系统当前已存储的有效 API Key
+    if not api_key or api_key.startswith("****") or "****" in api_key:
+        api_key = settings.LLM_API_KEY or ""
+
+    if not api_key:
+        raise BusinessException("请先填写大模型 API Key 后再拉取模型列表", code=400)
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=15.0)
+        models_resp = await client.models.list()
+
+        # 提取模型标识
+        model_ids = [m.id for m in models_resp.data if getattr(m, "id", None)]
+        if not model_ids:
+            raise BusinessException("供应商端点返回的模型列表为空", code=400)
+
+        # 针对常见大模型做优先级排序 (如 deepseek, qwen 等靠前)
+        def sort_priority(name: str):
+            lower = name.lower()
+            if "deepseek" in lower:
+                return (0, lower)
+            if "qwen" in lower:
+                return (1, lower)
+            if "gpt" in lower or "claude" in lower:
+                return (2, lower)
+            if "glm" in lower or "gemini" in lower:
+                return (3, lower)
+            return (4, lower)
+
+        model_ids.sort(key=sort_priority)
+        return Result.success(data=model_ids)
+    except Exception as e:
+        raise BusinessException(f"拉取模型列表失败: {str(e)}", code=400)

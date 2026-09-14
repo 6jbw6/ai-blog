@@ -39,6 +39,14 @@ export const updateAiConfigApi = (data: LlmConfig) => {
   })
 }
 
+export const fetchModelsApi = (data: { base_url: string; api_key?: string }) => {
+  return request<string[]>({
+    url: '/ai/models',
+    method: 'POST',
+    data
+  })
+}
+
 export const getRecommendedQuestionsApi = (limit: number = 8, refresh: boolean = false) => {
   return request<string[]>({
     url: '/ai/recommended-questions',

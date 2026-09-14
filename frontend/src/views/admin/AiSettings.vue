@@ -3,49 +3,83 @@
     <div class="page-title-row">
       <div>
         <h2 class="title">AI 算法引擎与大模型中枢配置</h2>
-        <p class="subtitle">统一管理 LLM 模型接入端点、RAG 向量检索超参数及知识库全量索引重构</p>
+        <p class="subtitle">统一管理自定义 LLM 模型接入端点、在线拉取模型列表、配置 RAG 向量检索超参数及知识库全量索引重构</p>
       </div>
     </div>
 
     <div class="settings-grid">
       <!-- 大模型接入策略卡片 -->
       <div class="setting-card">
-        <h3 class="card-title">🤖 大模型中立接入策略 (LLM Provider)</h3>
+        <h3 class="card-title">🤖 自定义大模型服务接入 (LLM Provider)</h3>
         <p class="card-desc">
-          本系统设计遵循策略模式，支持零成本离线演示（Mock 模式），亦可无缝切换至 DeepSeek、Kimi、智谱或 OpenAI 商业大模型。
+          本系统基于标准 OpenAI 兼容协议构建，支持任意云端或私有化大模型服务（如魔芯科技、DeepSeek、SiliconFlow、OpenAI、阿里云百炼等）。输入 Base URL 与 API Key 后可直接在线拉取可用模型列表。
         </p>
 
         <el-form :model="configForm" label-position="top">
-          <el-form-item label="模型接入商 (Provider)">
-            <el-radio-group v-model="configForm.provider" size="large">
-              <el-radio-button label="mock">本地智能 Mock (零API成本/稳定可靠)</el-radio-button>
-              <el-radio-button label="deepseek">DeepSeek (V3/R1)</el-radio-button>
-              <el-radio-button label="zhipu">智谱 GLM-4</el-radio-button>
-              <el-radio-button label="openai">OpenAI 协议兼容</el-radio-button>
-            </el-radio-group>
-          </el-form-item>
-
-          <el-form-item label="大模型 API Key">
+          <el-form-item label="自定义接入商名称 (Provider)">
             <el-input
-              v-model="configForm.api_key"
-              type="password"
-              show-password
-              placeholder="留空则自动降级为本地智能 RAG 算法推理..."
+              v-model="configForm.provider"
+              placeholder="请输入接入商名称，例如：魔芯科技 / DeepSeek / SiliconFlow / OpenAI / 阿里云百炼"
+              clearable
             />
           </el-form-item>
 
           <el-row :gutter="16">
-            <el-col :span="14">
+            <el-col :span="12">
               <el-form-item label="API Base URL 端点">
-                <el-input v-model="configForm.base_url" placeholder="例如：https://api.deepseek.com" />
+                <el-input
+                  v-model="configForm.base_url"
+                  placeholder="例如：https://www.moxin.studio/v1 或 https://api.deepseek.com/v1"
+                  clearable
+                />
               </el-form-item>
             </el-col>
-            <el-col :span="10">
-              <el-form-item label="Model 模型标识">
-                <el-input v-model="configForm.model" placeholder="例如：deepseek-chat" />
+            <el-col :span="12">
+              <el-form-item label="大模型 API Key">
+                <el-input
+                  v-model="configForm.api_key"
+                  type="password"
+                  show-password
+                  placeholder="请输入接入商提供的 API Key (sk-...)"
+                  clearable
+                />
               </el-form-item>
             </el-col>
           </el-row>
+
+          <el-form-item label="模型选择 (Model ID)">
+            <div class="model-select-row">
+              <el-select
+                v-model="configForm.model"
+                filterable
+                allow-create
+                default-first-option
+                placeholder="请选择或输入模型标识（可点击右侧拉取）"
+                class="model-select"
+                :loading="fetchingModels"
+              >
+                <el-option
+                  v-for="item in availableModels"
+                  :key="item"
+                  :label="item"
+                  :value="item"
+                />
+              </el-select>
+              <el-button
+                type="primary"
+                plain
+                :loading="fetchingModels"
+                @click="() => handleFetchModels(false)"
+                title="向 Base URL 端点拉取当前支持的模型列表"
+              >
+                <el-icon><Refresh /></el-icon>
+                <span>拉取模型列表</span>
+              </el-button>
+            </div>
+            <div class="field-hint">
+              💡 填写 Base URL 与 API Key 后，点击「拉取模型列表」即可在线获取该接入商支持的所有模型标识供直接选择。
+            </div>
+          </el-form-item>
 
           <h4 class="sub-title">🎯 RAG 向量知识库检索超参数</h4>
 
@@ -106,24 +140,72 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAiConfigApi, updateAiConfigApi, reindexAllApi } from '@/api/ai'
+import { Refresh } from '@element-plus/icons-vue'
+import { getAiConfigApi, updateAiConfigApi, reindexAllApi, fetchModelsApi } from '@/api/ai'
 import type { LlmConfig } from '@/types'
 
 const saving = ref(false)
 const reindexing = ref(false)
+const fetchingModels = ref(false)
+const availableModels = ref<string[]>([])
 
 const configForm = ref<LlmConfig>({
-  provider: 'mock',
+  provider: '自定义接入商',
   api_key: '',
-  base_url: 'https://api.deepseek.com',
-  model: 'deepseek-chat',
+  base_url: 'https://www.moxin.studio/v1',
+  model: '[次]deepseek-v4-flash',
   top_k: 4,
   similarity_threshold: 0.30
 })
 
+const handleFetchModels = async (silent = false) => {
+  if (!configForm.value.base_url) {
+    if (!silent) ElMessage.warning('请先填写 API Base URL 端点')
+    return
+  }
+  fetchingModels.value = true
+  try {
+    const models = await fetchModelsApi({
+      base_url: configForm.value.base_url,
+      api_key: configForm.value.api_key
+    })
+    if (Array.isArray(models) && models.length > 0) {
+      availableModels.value = models
+      if (!silent) {
+        ElMessage.success(`成功拉取到 ${models.length} 个可用模型`)
+      }
+      // 如果当前未选择模型，自动将第一个设为默认值
+      if (!configForm.value.model && models.length > 0) {
+        configForm.value.model = models[0]
+      }
+    } else {
+      if (!silent) ElMessage.warning('端点返回的模型列表为空')
+    }
+  } catch (err: any) {
+    if (!silent) {
+      ElMessage.error(err.message || '拉取模型列表失败，请检查 Base URL 与 API Key 是否有效')
+    }
+  } finally {
+    fetchingModels.value = false
+  }
+}
+
 const loadConfig = async () => {
-  const conf = await getAiConfigApi()
-  configForm.value = conf
+  try {
+    const conf = await getAiConfigApi()
+    if (conf) {
+      configForm.value = conf
+      if (conf.model && !availableModels.value.includes(conf.model)) {
+        availableModels.value.push(conf.model)
+      }
+      // 自动静默拉取一次当前端点的可用模型列表供下拉选取
+      if (conf.base_url) {
+        handleFetchModels(true)
+      }
+    }
+  } catch (e) {
+    console.warn('获取 AI 配置失败:', e)
+  }
 }
 
 const saveConfig = async () => {
@@ -155,15 +237,17 @@ onMounted(() => {
 
 <style scoped>
 .ai-settings-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.page-title-row {
+  margin-bottom: 1.5rem;
 }
 
 .title {
   margin: 0;
-  font-size: 1.45rem;
-  font-weight: 800;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: #18181b;
 }
 
@@ -175,7 +259,7 @@ onMounted(() => {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1.25fr 1fr;
   gap: 1.5rem;
 }
 
@@ -198,6 +282,24 @@ onMounted(() => {
   color: #71717a;
   line-height: 1.5;
   margin: 0 0 1.5rem 0;
+}
+
+.model-select-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.model-select {
+  flex: 1;
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: #71717a;
+  margin-top: 6px;
+  line-height: 1.4;
 }
 
 .sub-title {
