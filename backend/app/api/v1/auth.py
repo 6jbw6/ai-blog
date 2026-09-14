@@ -12,7 +12,11 @@ router = APIRouter(prefix="/auth", tags=["认证鉴权 (Auth)"])
 
 @router.post("/login", response_model=Result[TokenOut], summary="用户与管理员登录")
 def login(login_data: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == login_data.username).first()
+    user = db.query(User).filter(
+        (User.username == login_data.username) |
+        (User.email == login_data.username) |
+        ((login_data.username == "admin") & (User.role == "admin"))
+    ).first()
     if not user or not verify_password(login_data.password, user.password_hash):
         raise BusinessException("用户名或密码错误", code=400)
 

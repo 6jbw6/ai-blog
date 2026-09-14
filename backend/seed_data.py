@@ -26,14 +26,14 @@ def seed_database():
 
     try:
         # 1. 初始化管理员账号
-        admin = db.query(User).filter((User.username == "贾博文") | (User.role == "admin")).first()
+        admin = db.query(User).filter((User.username == "博主") | (User.role == "admin")).first()
         if not admin:
-            print("👤 创建初始管理员账号: 贾博文")
+            print("👤 创建初始管理员账号: 博主")
             admin = User(
-                username="贾博文",
+                username="博主",
                 password_hash=hash_password("jbw261932"),
                 email="3768183086@qq.com",
-                nickname="贾博文",
+                nickname="博主",
                 avatar="https://api.dicebear.com/7.x/bottts/svg?seed=admin",
                 role="admin"
             )
@@ -299,7 +299,7 @@ $$\\text{Final Score} = \\alpha \\cdot \\text{Sim}_{dense} + (1 - \\alpha) \\cdo
                     user_name="李明 (算法硕博在读)",
                     user_email="liming@edu.cn",
                     user_avatar="https://api.dicebear.com/7.x/bottts/svg?seed=liming",
-                    content="博主推导得很清晰！特别是指出了除以 sqrt(d_k) 防止梯度消失的细节，校招面试时被字节面试官问到过这个点！",
+                    content="博主推导得很清晰！特别是指出了除以 sqrt(d_k) 防止梯度消失的细节，校招面试时被一线大厂面试官问到过这个点！",
                     is_approved=True,
                     is_admin=False
                 )
@@ -310,10 +310,10 @@ $$\\text{Final Score} = \\alpha \\cdot \\text{Sim}_{dense} + (1 - \\alpha) \\cdo
                 reply_comment = Comment(
                     article_id=sample_article.id,
                     parent_id=root_comment.id,
-                    user_name="贾博文 (博主)",
+                    user_name="博主",
                     user_email="admin@aiblog.com",
                     user_avatar=admin.avatar,
-                    content="感谢认可！这个问题在深入推导 Softmax 雅可比矩阵的时候非常直观，欢迎多交流！也可以随时在右下角和我训练的 AI 数字分身聊聊其他算法细节~",
+                    content="感谢认可！这个问题在深入推导 Softmax 雅可比矩阵的时候非常直观，欢迎多交流！也可以随时在右下角和我配置的 AI 智能体聊聊其他算法细节~",
                     is_approved=True,
                     is_admin=True
                 )
