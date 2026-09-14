@@ -1,87 +1,74 @@
-import re
 from typing import List, Dict, Any
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 
 
 class MarkdownChunker:
     """
-    针对 Markdown 和技术博文的标题感知分块器 (Title-Aware Recursive Chunker)
+    基于 LangChain 官方工业级标准分块器 (LangChain MarkdownHeaderTextSplitter & RecursiveCharacterTextSplitter)
     
-    算法特性 (面试核心阐述点):
-    1. 保持 Markdown 语义完整性：识别 #, ##, ### 等多级标题，维护上下文层级结构；
-    2. 递归滑动窗口切分：优先按段落切分，段落过长时按标点切分，并保留重叠步长 (Overlap) 避免断章取义；
-    3. 携带元数据注入：每个切片顶部自动附带章节路径，增强向量特征表达能力。
+    核心优势:
+    1. 结构感知：使用 LangChain 的 MarkdownHeaderTextSplitter 按 Markdown 标题层级（H1~H4）精准抽取结构化元数据；
+    2. 递归细分：对长段落采用 RecursiveCharacterTextSplitter，优先按自然段落、中文句读标点分块并保持 Overlap 滑动窗口；
+    3. 标准化上下文注入：自动维护完整的章节层级路径（Breadcrumb），提升 RAG 向量召回精确率与可溯源性。
     """
 
     def __init__(self, target_chunk_size: int = 450, chunk_overlap: int = 60):
         self.target_chunk_size = target_chunk_size
         self.chunk_overlap = chunk_overlap
 
+        # 配置 LangChain 标题切分规则
+        self.headers_to_split_on = [
+            ("#", "h1"),
+            ("##", "h2"),
+            ("###", "h3"),
+            ("####", "h4"),
+        ]
+        self.header_splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=self.headers_to_split_on,
+            strip_headers=False
+        )
+        self.recursive_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=self.target_chunk_size,
+            chunk_overlap=self.chunk_overlap,
+            separators=["\n\n", "\n", "。", "！", "？", "；", ". ", " ", ""]
+        )
+
     def split_text(self, title: str, content: str) -> List[Dict[str, Any]]:
-        """将博文解析并切分成具有上下文感知的文本块列表"""
-        lines = content.splitlines()
+        """使用 LangChain 标准管道将博文解析切分为上下文感知的切片列表"""
+        if not content or not content.strip():
+            return []
+
+        # 1. 结构切分 (提取标题树)
+        try:
+            header_docs = self.header_splitter.split_text(content)
+        except Exception:
+            header_docs = []
+
+        # 2. 递归细分
+        if header_docs:
+            docs = self.recursive_splitter.split_documents(header_docs)
+        else:
+            docs = self.recursive_splitter.create_documents([content])
+
         chunks: List[Dict[str, Any]] = []
-        
-        current_heading = title
-        current_buffer: List[str] = []
-        current_length = 0
+        for d in docs:
+            # 提取标题路径
+            meta_headings = [v for k, v in d.metadata.items() if k in ("h1", "h2", "h3", "h4")]
+            if meta_headings:
+                heading_path = " > ".join(meta_headings)
+                chunk_title = f"{title} > {heading_path}"
+                chunk_content = f"【章节: {heading_path}】\n{d.page_content.strip()}"
+            else:
+                chunk_title = title
+                chunk_content = f"【文章: {title}】\n{d.page_content.strip()}"
 
-        heading_pattern = re.compile(r"^(#{1,4})\s+(.+)$")
+            chunks.append({
+                "title": chunk_title,
+                "content": chunk_content,
+                "token_count": len(d.page_content)
+            })
 
-        for line in lines:
-            stripped = line.strip()
-            if not stripped:
-                continue
-
-            match = heading_pattern.match(stripped)
-            if match:
-                # 遇到新标题时，如果当前缓冲区已有内容，触发一次切块归档
-                if current_buffer and current_length >= (self.target_chunk_size // 2):
-                    chunk_text = "\n".join(current_buffer)
-                    chunks.append({
-                        "title": f"{title} > {current_heading}",
-                        "content": f"【章节: {current_heading}】\n{chunk_text}",
-                        "token_count": len(chunk_text)
-                    })
-                    # 按照 overlap 保留末尾部分
-                    current_buffer = current_buffer[-2:] if len(current_buffer) >= 2 else []
-                    current_length = sum(len(x) for x in current_buffer)
-                
-                current_heading = match.group(2)
-                continue
-
-            current_buffer.append(stripped)
-            current_length += len(stripped)
-
-            # 当缓冲区超过目标大小时切块
-            if current_length >= self.target_chunk_size:
-                chunk_text = "\n".join(current_buffer)
-                chunks.append({
-                    "title": f"{title} > {current_heading}",
-                    "content": f"【章节: {current_heading}】\n{chunk_text}",
-                    "token_count": len(chunk_text)
-                })
-                # 滑动窗口保留 overlap
-                overlap_chars = 0
-                overlap_lines = []
-                for prev_line in reversed(current_buffer):
-                    overlap_lines.insert(0, prev_line)
-                    overlap_chars += len(prev_line)
-                    if overlap_chars >= self.chunk_overlap:
-                        break
-                current_buffer = overlap_lines
-                current_length = sum(len(x) for x in current_buffer)
-
-        # 处理末尾剩余缓冲区
-        if current_buffer:
-            chunk_text = "\n".join(current_buffer)
-            if len(chunk_text.strip()) > 15:  # 忽略过短无意义尾行
-                chunks.append({
-                    "title": f"{title} > {current_heading}",
-                    "content": f"【章节: {current_heading}】\n{chunk_text}",
-                    "token_count": len(chunk_text)
-                })
-
-        # 如果文章整体过短未产生任何 chunk，将全文作为一个 chunk
+        # 保底处理：如果无有效分块，直接生成单一分块
         if not chunks and content.strip():
             chunks.append({
                 "title": title,
