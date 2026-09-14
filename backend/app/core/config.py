@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     INITIAL_ADMIN_EMAIL: str = "admin@aiblog.com"
 
     # AI / LLM Configuration
-    LLM_PROVIDER: str = "mock"  # "mock" | "deepseek" | "zhipu" | "openai"
+    LLM_PROVIDER: str = "deepseek"  # "deepseek" | "zhipu" | "openai"
     LLM_API_KEY: Optional[str] = None
     LLM_BASE_URL: str = "https://api.deepseek.com"
     LLM_MODEL: str = "deepseek-chat"
