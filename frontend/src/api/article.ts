@@ -67,9 +67,16 @@ export const deleteArticleApi = (id: number) => {
 }
 
 export const likeArticleApi = (id: number) => {
-  return request<number>({
+  return request<{ liked: boolean; likes_count: number }>({
     url: `/articles/${id}/like`,
     method: 'POST'
+  })
+}
+
+export const getArticleInteractionApi = (id: number) => {
+  return request<{ is_liked: boolean; is_favorited: boolean; likes_count: number }>({
+    url: `/articles/${id}/interaction`,
+    method: 'GET'
   })
 }
 
@@ -77,5 +84,40 @@ export const reindexArticleApi = (id: number) => {
   return request<number>({
     url: `/articles/${id}/reindex`,
     method: 'POST'
+  })
+}
+
+export const getMyLikedArticlesApi = () => {
+  return request<Array<{
+    id: number
+    title: string
+    slug: string
+    summary?: string
+    category_name?: string
+    views_count: number
+    likes_count: number
+    created_at: string
+    liked_at: string
+  }>>({
+    url: '/articles/user/my-likes',
+    method: 'GET'
+  })
+}
+
+export const getMyCreatedArticlesApi = () => {
+  return request<Array<{
+    id: number
+    title: string
+    slug: string
+    summary?: string
+    category_name?: string
+    is_published: boolean
+    views_count: number
+    likes_count: number
+    created_at: string
+    vector_status: string
+  }>>({
+    url: '/articles/user/my-created',
+    method: 'GET'
   })
 }

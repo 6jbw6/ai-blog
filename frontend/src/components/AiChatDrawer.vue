@@ -18,6 +18,7 @@
       direction="rtl"
       size="480px"
       :show-close="true"
+      :lock-scroll="false"
       custom-class="ai-chat-drawer"
     >
       <template #header>
@@ -40,7 +41,7 @@
         <div class="welcome-card">
           <div class="welcome-badge">✦ RAG 知识库智能助手</div>
           <p class="welcome-text">
-            你好！我是博客的 <strong>AI 智能体</strong> 🤖。我已全面索引了关于 <strong>Transformer 架构、LoRA 微调、RAG 向量检索</strong> 等领域的深度技术博文。
+            你好！我是博客论坛的 <strong>AI 智能体</strong> 🤖。我已全面索引了关于 <strong>AI Agent 架构、Transformer 原理、LoRA 微调、RAG 向量检索</strong> 等领域的深度技术博文。
           </p>
           <div class="recommend-header">
             <span class="welcome-hint">你可以随时向我提问，或探索热度推荐：</span>

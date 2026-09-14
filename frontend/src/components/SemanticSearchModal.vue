@@ -3,6 +3,7 @@
     v-model="aiChatStore.isSearchOpen"
     width="680px"
     :show-close="true"
+    :lock-scroll="false"
     custom-class="semantic-search-dialog"
     title="🔍 自然语言向量语义检索"
   >
@@ -68,23 +69,16 @@
       <div v-else-if="searched" class="search-empty">
         <el-empty description="未检索到相似度达到阈值的博文切片，换个提问方式试试吧~" />
       </div>
-
-      <div v-else class="search-placeholder-intro">
-        <p class="intro-title">💡 算法岗核心面试亮点：为什么需要向量语义检索？</p>
-        <p class="intro-desc">
-          传统数据库只支持 <code>LIKE %keyword%</code> 字符硬匹配。本项目基于 128 维稠密特征空间与余弦相似度计算，即使提问中完全不包含文章原字句，也能基于深层语义关联精准召回对应博文！
-        </p>
-      </div>
     </div>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import { useAiChatStore } from '@/stores/aiChat'
-import { semanticSearchApi } from '@/api/ai'
+import { semanticSearchApi, getHotKeywordsApi } from '@/api/ai'
 import type { SemanticSearchResultItem } from '@/types'
 
 const router = useRouter()
@@ -95,12 +89,33 @@ const loading = ref(false)
 const searched = ref(false)
 const results = ref<SemanticSearchResultItem[]>([])
 
-const hotKeywords = [
-  '显存不够怎么微调大模型？',
-  '为什么自注意力除以根号dk？',
-  '多路召回与混合检索原理',
-  'LoRA 低秩本征秩假设'
-]
+const hotKeywords = ref<string[]>([
+  'AI Agent 认知架构',
+  'LangGraph 循环流控',
+  'Multi-Agent 多智能体协同',
+  'LoRA 显存优化'
+])
+
+const loadHotKeywords = async () => {
+  try {
+    const data = await getHotKeywordsApi(6)
+    if (data && data.length > 0) {
+      hotKeywords.value = data
+    }
+  } catch {
+    // 保留默认推荐
+  }
+}
+
+onMounted(() => {
+  loadHotKeywords()
+})
+
+watch(() => aiChatStore.isSearchOpen, (isOpen) => {
+  if (isOpen) {
+    loadHotKeywords()
+  }
+})
 
 const quickSearch = (kw: string) => {
   searchQuery.value = kw
@@ -223,27 +238,5 @@ const selectArticle = (slug: string) => {
   font-size: 0.75rem;
   color: #059669;
   font-weight: 500;
-}
-
-.search-placeholder-intro {
-  background: #f4f4f5;
-  border: 1px dashed #e4e4e7;
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
-  margin-top: 0.5rem;
-}
-
-.intro-title {
-  margin: 0 0 6px 0;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #18181b;
-}
-
-.intro-desc {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #64748b;
-  line-height: 1.5;
 }
 </style>

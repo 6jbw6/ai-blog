@@ -96,7 +96,7 @@ const router = createRouter({
   }
 })
 
-// 企业级 RBAC 路由守卫拦截
+// 企业级全局登录拦截与 RBAC 权限守卫
 router.beforeEach((to, _from, next) => {
   if (to.meta.title) {
     document.title = to.meta.title as string
@@ -104,10 +104,24 @@ router.beforeEach((to, _from, next) => {
 
   const userStore = useUserStore()
 
+  // 未登录时，访问任何路由直接拦截跳转至登录页
+  if (!userStore.isLoggedIn) {
+    if (to.name !== 'Login') {
+      next({ name: 'Login' })
+      return
+    }
+  } else {
+    // 已登录状态访问登录页，自动跳转至首页
+    if (to.name === 'Login') {
+      next({ name: 'Home' })
+      return
+    }
+  }
+
   // 检查是否需要管理员权限
   const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
   if (requiresAdmin) {
-    if (!userStore.isLoggedIn || !userStore.isAdmin) {
+    if (!userStore.isAdmin) {
       ElMessage.warning('权限不足：请先以管理员身份登录系统')
       next({ name: 'Login' })
       return

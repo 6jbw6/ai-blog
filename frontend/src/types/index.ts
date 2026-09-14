@@ -18,6 +18,7 @@ export interface User {
   email: string
   nickname: string
   avatar?: string
+  bio?: string
   role: 'admin' | 'reader'
   is_active: boolean
   created_at: string

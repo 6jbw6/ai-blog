@@ -37,6 +37,11 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function setUser(newUser: User) {
+    user.value = newUser
+    localStorage.setItem('user_info', JSON.stringify(newUser))
+  }
+
   function logout() {
     token.value = ''
     user.value = null
@@ -52,6 +57,7 @@ export const useUserStore = defineStore('user', () => {
     isAdmin,
     login,
     fetchProfile,
+    setUser,
     logout
   }
 })

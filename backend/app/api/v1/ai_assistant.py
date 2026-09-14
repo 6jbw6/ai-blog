@@ -26,7 +26,7 @@ from app.schemas.ai import (
     FetchModelsRequest
 )
 from app.ai_engine.rag_service import rag_service
-from app.ai_engine.recommendation_service import record_search_query, get_dynamic_recommended_questions
+from app.ai_engine.recommendation_service import record_search_query, get_dynamic_recommended_questions, get_dynamic_hot_keywords
 from app.core.config import settings
 
 router = APIRouter(prefix="/ai", tags=["AI 算法与大模型知识库 (AI Core)"])
@@ -137,6 +137,18 @@ def get_recommended_questions(
     """
     questions = get_dynamic_recommended_questions(db=db, limit=limit, shuffle=True)
     return Result.success(data=questions)
+
+
+@router.get("/hot-keywords", response_model=Result[List[str]], summary="根据搜索日志热度与博文概念动态推荐热搜关键词")
+def get_hot_keywords(
+    limit: int = 6,
+    db: Session = Depends(get_db)
+):
+    """
+    根据用户实际搜索日志 (SearchLog) 频次、热门博文分类与核心概念，动态输出热搜概念标签
+    """
+    keywords = get_dynamic_hot_keywords(db=db, limit=limit)
+    return Result.success(data=keywords)
 
 
 @router.post("/summary", response_model=Result[AiSummaryResponse], summary="AI 自动生成文章 TL;DR 摘要与推荐标签")

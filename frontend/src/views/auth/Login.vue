@@ -3,19 +3,13 @@
     <!-- 顶部极简导航栏 -->
     <header class="login-header">
       <div class="header-inner">
-        <router-link to="/" class="brand-logo">
+        <div class="brand-logo">
           <span class="logo-badge">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="#10b981" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
           <span class="brand-title-text">AI-Blog · 技术中枢</span>
-        </router-link>
-
-        <div class="header-actions">
-          <router-link to="/" class="nav-link-home">
-            返回博客前台 <span class="arrow">&rarr;</span>
-          </router-link>
         </div>
       </div>
     </header>
@@ -80,10 +74,10 @@
       <section class="login-card-container">
         <div class="auth-card">
           <div class="card-header">
-            <h2 class="card-title">{{ isRegister ? '注册读者账号' : '欢迎来到我的博客' }}</h2>
+            <h2 class="card-title">{{ isRegister ? '注册账号' : '欢迎来到我的博客' }}</h2>
           </div>
 
-          <!-- 模式切换标签页 (账号登录 / 读者注册) -->
+          <!-- 模式切换标签页 (账号登录 / 注册) -->
           <div class="auth-tabs">
             <button
               type="button"
@@ -99,7 +93,7 @@
               :class="{ active: isRegister }"
               @click="isRegister = true"
             >
-              读者注册
+              注册
             </button>
           </div>
 
@@ -122,12 +116,12 @@
               />
             </el-form-item>
 
-            <el-form-item v-if="isRegister" label="展示昵称">
+            <el-form-item v-if="isRegister" label="个人签名 (可选)">
               <el-input
-                v-model="form.nickname"
+                v-model="form.bio"
                 size="large"
-                placeholder="请输入展示昵称"
-                :prefix-icon="AvatarIcon"
+                placeholder="请输入个人签名 (例如: 专注于 AI 与大模型应用架构)"
+                :prefix-icon="EditPenIcon"
               />
             </el-form-item>
 
@@ -151,7 +145,7 @@
                 :loading="loading"
                 @click="handleSubmit"
               >
-                {{ isRegister ? '立即注册并体验' : '登 录' }}
+                {{ isRegister ? '立即注册' : '登 录' }}
               </el-button>
             </div>
 
@@ -174,7 +168,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User as UserIcon, Lock as LockIcon, Message as MessageIcon, Avatar as AvatarIcon } from '@element-plus/icons-vue'
+import { User as UserIcon, Lock as LockIcon, Message as MessageIcon, EditPen as EditPenIcon } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { registerApi } from '@/api/auth'
 
@@ -187,7 +181,7 @@ const loading = ref(false)
 const form = ref({
   username: '',
   email: '',
-  nickname: '',
+  bio: '',
   password: ''
 })
 
@@ -204,7 +198,12 @@ const handleSubmit = async () => {
         ElMessage.warning('注册请填写电子邮箱')
         return
       }
-      await registerApi(form.value)
+      await registerApi({
+        username: form.value.username,
+        email: form.value.email,
+        bio: form.value.bio,
+        password: form.value.password
+      })
       ElMessage.success('注册成功，正在为你自动登录...')
     }
 

@@ -19,6 +19,11 @@
   padding: 0;
 }
 
+html {
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+}
+
 html, body {
   width: 100%;
   min-height: 100%;
@@ -29,6 +34,16 @@ html, body {
   background-size: cover;
   color: #18181b;
   overflow-x: hidden;
+}
+
+/* 彻底解决 Element Plus 打开 Dialog / Drawer 弹窗时页面向左偏移抖动问题 */
+body.el-popup-parent--hidden {
+  overflow-y: scroll !important;
+  padding-right: 0 !important;
+}
+
+.el-overlay {
+  overflow-y: auto !important;
 }
 
 #app {

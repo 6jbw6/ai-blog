@@ -55,6 +55,14 @@ export const getRecommendedQuestionsApi = (limit: number = 8, refresh: boolean =
   })
 }
 
+export const getHotKeywordsApi = (limit: number = 6) => {
+  return request<string[]>({
+    url: '/ai/hot-keywords',
+    method: 'GET',
+    params: { limit }
+  })
+}
+
 export const getChatHistoryApi = (limit: number = 10) => {
   return request<AiChatMessageItem[]>({
     url: '/ai/history',

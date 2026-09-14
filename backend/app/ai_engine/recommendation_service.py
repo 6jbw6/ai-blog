@@ -120,3 +120,71 @@ def get_dynamic_recommended_questions(db: Session, limit: int = 8, shuffle: bool
         return selected[:limit]
 
     return candidate_questions[:limit]
+
+
+FALLBACK_HOT_KEYWORDS = [
+    "AI Agent 认知架构",
+    "LangGraph 循环流控",
+    "Multi-Agent 多智能体协同",
+    "LoRA 显存优化",
+    "自注意力机制缩放",
+    "多路召回与混合检索",
+    "Function Calling 实战",
+    "Self-RAG 反思纠错"
+]
+
+
+def get_dynamic_hot_keywords(db: Session, limit: int = 6) -> List[str]:
+    """
+    根据用户实际搜索日志 (SearchLog) 热度排名、热门博文分类/标签及高频技术概念，
+    动态生成热搜概念关键词清单。
+    """
+    keywords: List[str] = []
+    seen = set()
+
+    def add_kw(kw: str):
+        k = kw.strip().rstrip("?？!！。")
+        if k and k not in seen and 2 <= len(k) <= 30:
+            seen.add(k)
+            keywords.append(k)
+
+    # 1. 召回最高热度的实际搜索记录
+    try:
+        hot_logs = (
+            db.query(SearchLog)
+            .order_by(desc(SearchLog.hit_count), desc(SearchLog.last_searched_at))
+            .limit(10)
+            .all()
+        )
+        for log in hot_logs:
+            add_kw(log.query)
+    except Exception:
+        pass
+
+    # 2. 从浏览量高的博文标题或标签提炼核心概念
+    try:
+        top_articles = (
+            db.query(Article)
+            .filter(Article.is_published == True)
+            .order_by(desc(Article.views_count), desc(Article.likes_count))
+            .limit(6)
+            .all()
+        )
+        for art in top_articles:
+            if art.tags:
+                for t in art.tags:
+                    add_kw(t.name)
+            title = art.title
+            if "：" in title:
+                add_kw(title.split("：")[0])
+            elif ":" in title:
+                add_kw(title.split(":")[0])
+    except Exception:
+        pass
+
+    # 3. 兜底精选高频硬核概念
+    for kw in FALLBACK_HOT_KEYWORDS:
+        add_kw(kw)
+
+    return keywords[:limit]
+

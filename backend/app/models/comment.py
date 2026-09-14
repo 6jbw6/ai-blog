@@ -10,6 +10,7 @@ class Comment(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     article_id = Column(Integer, ForeignKey("articles.id", ondelete="CASCADE"), nullable=False, index=True)
     parent_id = Column(Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True, comment="父级评论ID(实现嵌套评论树)")
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="评论用户ID")
     
     user_name = Column(String(64), nullable=False, comment="评论人昵称")
     user_email = Column(String(128), nullable=False, comment="评论人邮箱")
@@ -24,3 +25,4 @@ class Comment(Base):
 
     article = relationship("Article", back_populates="comments")
     parent = relationship("Comment", remote_side=[id], backref="replies")
+    user = relationship("User", backref="comments")

@@ -75,7 +75,15 @@
               @click="handleLike"
             >
               <span class="heart-icon">{{ hasLiked ? '❤️' : '🤍' }}</span>
-              <span>点赞支持 ({{ article.likes_count }})</span>
+              <span>{{ hasLiked ? '已点赞' : '点赞支持' }} ({{ article.likes_count }})</span>
+            </button>
+
+            <button
+              :class="['btn-favorite', hasFavorited ? 'favorited' : '']"
+              @click="handleFavorite"
+            >
+              <span class="fav-icon">{{ hasFavorited ? '⭐' : '☆' }}</span>
+              <span>{{ hasFavorited ? '已收藏' : '收藏博文' }}</span>
             </button>
           </div>
         </footer>
@@ -85,12 +93,12 @@
       <section class="comments-section">
         <h3 class="section-title">💬 读者互动与讨论 ({{ comments.length }})</h3>
 
-        <!-- 发表评论表单 -->
-        <div class="comment-form-card">
-          <h4 class="form-title">发表见解</h4>
-          <div class="form-inputs-row">
-            <el-input v-model="commentForm.user_name" placeholder="你的昵称 *" style="width: 200px" />
-            <el-input v-model="commentForm.user_email" placeholder="邮箱 (用于展示头像) *" style="width: 260px" />
+        <!-- 发表评论表单（仅登录用户可用） -->
+        <div v-if="userStore.isLoggedIn" class="comment-form-card">
+          <div class="comment-user-header">
+            <el-avatar :size="28" :src="userStore.user?.avatar || '/user-avatar.svg'" />
+            <span class="current-username">{{ userStore.user?.username || userStore.user?.nickname }}</span>
+            <span class="comment-as-label">发表见解</span>
           </div>
           <el-input
             v-model="commentForm.content"
@@ -103,6 +111,14 @@
             <el-button type="primary" :loading="submittingComment" @click="submitComment">
               提交评论
             </el-button>
+          </div>
+        </div>
+
+        <div v-else class="comment-form-card not-logged-in-card">
+          <div class="login-prompt-box">
+            <span class="lock-icon">🔒</span>
+            <p class="prompt-text">仅登录用户可参与技术讨论与评论，登录后共同交流算法细节与技术经验。</p>
+            <router-link to="/login" class="btn-prompt-login">立即登录 / 注册</router-link>
           </div>
         </div>
 
@@ -149,29 +165,32 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import Navbar from '@/components/Navbar.vue'
 import AiChatDrawer from '@/components/AiChatDrawer.vue'
 import SemanticSearchModal from '@/components/SemanticSearchModal.vue'
 import MarkdownViewer from '@/components/MarkdownViewer.vue'
-import { getArticleDetailApi, likeArticleApi } from '@/api/article'
+import { getArticleDetailApi, likeArticleApi, getArticleInteractionApi } from '@/api/article'
+import { toggleFavoriteApi } from '@/api/favorite'
 import { getArticleCommentsApi, postCommentApi } from '@/api/comment'
 import { useAiChatStore } from '@/stores/aiChat'
+import { useUserStore } from '@/stores/user'
 import type { ArticleDetail, Comment } from '@/types'
 
 const route = useRoute()
+const router = useRouter()
 const aiChatStore = useAiChatStore()
+const userStore = useUserStore()
 
 const article = ref<ArticleDetail | null>(null)
 const comments = ref<Comment[]>([])
 const loading = ref(true)
 const hasLiked = ref(false)
+const hasFavorited = ref(false)
 const submittingComment = ref(false)
 
 const commentForm = ref({
-  user_name: '',
-  user_email: '',
   content: ''
 })
 
@@ -182,8 +201,24 @@ const loadArticle = async () => {
     const art = await getArticleDetailApi(idOrSlug)
     article.value = art
     loadComments(art.id)
+    if (userStore.isLoggedIn) {
+      loadInteraction(art.id)
+    }
   } finally {
     loading.value = false
+  }
+}
+
+const loadInteraction = async (articleId: number) => {
+  try {
+    const inter = await getArticleInteractionApi(articleId)
+    hasLiked.value = inter.is_liked
+    hasFavorited.value = inter.is_favorited
+    if (article.value) {
+      article.value.likes_count = inter.likes_count
+    }
+  } catch {
+    // 游客态或加载异常忽略
   }
 }
 
@@ -193,14 +228,35 @@ const loadComments = async (articleId: number) => {
 }
 
 const handleLike = async () => {
-  if (!article.value || hasLiked.value) return
-  hasLiked.value = true
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再点赞')
+    router.push('/login')
+    return
+  }
+  if (!article.value) return
   try {
-    const newLikes = await likeArticleApi(article.value.id)
-    article.value.likes_count = newLikes
-    ElMessage.success('感谢点赞与认可！')
+    const res = await likeArticleApi(article.value.id)
+    hasLiked.value = res.liked
+    article.value.likes_count = res.likes_count
+    ElMessage.success(res.liked ? '感谢点赞与认可！' : '已取消点赞')
   } catch (e) {
-    hasLiked.value = false
+    ElMessage.error('点赞失败，请稍后重试')
+  }
+}
+
+const handleFavorite = async () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再收藏博文')
+    router.push('/login')
+    return
+  }
+  if (!article.value) return
+  try {
+    const res = await toggleFavoriteApi(article.value.id)
+    hasFavorited.value = res.is_favorited
+    ElMessage.success(res.is_favorited ? '已加入我的收藏！' : '已取消收藏')
+  } catch (e) {
+    ElMessage.error('收藏操作失败，请重试')
   }
 }
 
@@ -210,9 +266,14 @@ const askAiThisArticle = () => {
 }
 
 const submitComment = async () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再发表评论')
+    router.push('/login')
+    return
+  }
   if (!article.value) return
-  if (!commentForm.value.user_name.trim() || !commentForm.value.user_email.trim() || !commentForm.value.content.trim()) {
-    ElMessage.warning('请填写昵称、邮箱及评论内容')
+  if (!commentForm.value.content.trim()) {
+    ElMessage.warning('请填写评论内容')
     return
   }
 
@@ -220,8 +281,8 @@ const submitComment = async () => {
   try {
     await postCommentApi({
       article_id: article.value.id,
-      user_name: commentForm.value.user_name,
-      user_email: commentForm.value.user_email,
+      user_name: userStore.user?.username || userStore.user?.nickname || '技术读者',
+      user_email: userStore.user?.email || 'reader@ai-blog.local',
       content: commentForm.value.content
     })
     ElMessage.success('评论发表成功')
@@ -440,7 +501,14 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.btn-like {
+.like-action-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-like,
+.btn-favorite {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -463,6 +531,13 @@ onMounted(() => {
   background: #fff1f2;
 }
 
+.btn-favorite:hover,
+.btn-favorite.favorited {
+  border-color: #f59e0b;
+  color: #d97706;
+  background: #fffbeb;
+}
+
 /* 评论互动 */
 .comments-section {
   margin-top: 2.5rem;
@@ -481,6 +556,64 @@ onMounted(() => {
   padding: 1.5rem;
   border: 1px solid #e4e4e7;
   margin-bottom: 2rem;
+}
+
+.comment-user-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.current-username {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: #18181b;
+}
+
+.comment-as-label {
+  font-size: 0.8rem;
+  color: #a1a1aa;
+}
+
+.not-logged-in-card {
+  text-align: center;
+  padding: 2.2rem 1.5rem;
+  background: #fafafa;
+}
+
+.login-prompt-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.lock-icon {
+  font-size: 26px;
+}
+
+.prompt-text {
+  font-size: 0.95rem;
+  color: #71717a;
+  margin: 0;
+}
+
+.btn-prompt-login {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 8px 22px;
+  background: #10b981;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.btn-prompt-login:hover {
+  background: #059669;
 }
 
 .form-title {

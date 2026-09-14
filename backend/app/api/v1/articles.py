@@ -4,11 +4,13 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from app.core.database import get_db
 from app.core.response import Result, PageResult, BusinessException
-from app.api.deps import require_admin, get_optional_user
+from app.api.deps import require_admin, get_optional_user, get_current_user
 from app.models.article import Article
 from app.models.tag import Tag
 from app.models.article_tag import article_tags
 from app.models.user import User
+from app.models.article_like import ArticleLike
+from app.models.favorite import Favorite
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticleListItem, ArticleDetail
 from app.ai_engine.rag_service import rag_service
 from app.ai_engine.recommendation_service import record_search_query
@@ -59,6 +61,62 @@ def list_articles(
     items = [ArticleListItem.model_validate(a) for a in articles]
     page_data = PageResult.create(items=items, total=total, page=page, size=size)
     return Result.success(data=page_data)
+
+
+@router.get("/user/my-likes", summary="获取当前登录用户点赞的博文列表 (需登录)")
+def get_my_liked_articles(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    likes = (
+        db.query(ArticleLike)
+        .filter(ArticleLike.user_id == current_user.id)
+        .order_by(ArticleLike.created_at.desc())
+        .all()
+    )
+    items = []
+    for l in likes:
+        if l.article and l.article.is_published:
+            items.append({
+                "id": l.article.id,
+                "title": l.article.title,
+                "slug": l.article.slug,
+                "summary": l.article.summary,
+                "category_name": l.article.category.name if l.article.category else None,
+                "views_count": l.article.views_count,
+                "likes_count": l.article.likes_count,
+                "created_at": l.article.created_at,
+                "liked_at": l.created_at
+            })
+    return Result.success(data=items)
+
+
+@router.get("/user/my-created", summary="获取当前登录用户创作的博文列表 (需登录)")
+def get_my_created_articles(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    articles = (
+        db.query(Article)
+        .filter(Article.author_id == current_user.id)
+        .order_by(Article.created_at.desc())
+        .all()
+    )
+    items = []
+    for a in articles:
+        items.append({
+            "id": a.id,
+            "title": a.title,
+            "slug": a.slug,
+            "summary": a.summary,
+            "category_name": a.category.name if a.category else None,
+            "is_published": a.is_published,
+            "views_count": a.views_count,
+            "likes_count": a.likes_count,
+            "created_at": a.created_at,
+            "vector_status": a.vector_status
+        })
+    return Result.success(data=items)
 
 
 @router.get("/{id_or_slug}", response_model=Result[ArticleDetail], summary="根据ID或别名获取文章详情")
@@ -170,15 +228,61 @@ def delete_article(
     return Result.success(message="文章及关联向量切片已彻底删除")
 
 
-@router.post("/{id}/like", response_model=Result[int], summary="文章点赞")
-def like_article(id: int, db: Session = Depends(get_db)):
+@router.post("/{id}/like", summary="文章点赞/取消点赞 (需登录)")
+def like_article(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     article = db.query(Article).filter(Article.id == id).first()
     if not article:
         raise BusinessException("文章不存在", code=404)
 
-    article.likes_count += 1
-    db.commit()
-    return Result.success(data=article.likes_count, message="点赞成功")
+    existing = db.query(ArticleLike).filter(
+        ArticleLike.user_id == current_user.id,
+        ArticleLike.article_id == article.id
+    ).first()
+
+    if existing:
+        db.delete(existing)
+        article.likes_count = max(0, article.likes_count - 1)
+        db.commit()
+        return Result.success(data={"liked": False, "likes_count": article.likes_count}, message="已取消点赞")
+    else:
+        new_like = ArticleLike(user_id=current_user.id, article_id=article.id)
+        db.add(new_like)
+        article.likes_count += 1
+        db.commit()
+        return Result.success(data={"liked": True, "likes_count": article.likes_count}, message="点赞成功")
+
+
+@router.get("/{id}/interaction", summary="获取当前登录用户对文章的点赞与收藏状态")
+def get_article_interaction(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user)
+):
+    article = db.query(Article).filter(Article.id == id).first()
+    if not article:
+        raise BusinessException("文章不存在", code=404)
+
+    is_liked = False
+    is_favorited = False
+    if current_user:
+        is_liked = bool(db.query(ArticleLike).filter(
+            ArticleLike.user_id == current_user.id,
+            ArticleLike.article_id == article.id
+        ).first())
+        is_favorited = bool(db.query(Favorite).filter(
+            Favorite.user_id == current_user.id,
+            Favorite.article_id == article.id
+        ).first())
+
+    return Result.success(data={
+        "is_liked": is_liked,
+        "is_favorited": is_favorited,
+        "likes_count": article.likes_count
+    })
 
 
 @router.post("/{id}/reindex", response_model=Result[int], summary="手动触发该文章向量索引重构 (管理员)")

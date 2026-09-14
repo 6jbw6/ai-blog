@@ -1,4 +1,4 @@
-# AI-Blog: 基于 RAG 与大模型协同的企业级个人博客知识库系统
+# AI-Blog: 基于 RAG 与大模型协同的企业级博客论坛知识库系统
 
 > **项目定位**：面向**软件工程专业求职 AI 算法工程、大模型应用开发（RAG/Agent/LLM Application）及全栈工程师岗位**的企业级实战项目。
 > **项目作者**：软件工程专业开发者 (专注于大模型应用开发、RAG 检索增强、分布式系统架构与工业级全栈工程)
@@ -31,32 +31,48 @@
   - 后端提供 `POST /api/v1/ai/models` 端点，基于 Base URL 与 Key 实时向供应商拉取并智能排序模型列表；
   - 前端支持可搜索可下拉的模型选择器，填好配置一键拉取选择，杜绝拼写错误。
 
-### 3. 🔥 搜索热度与博文深度剖析驱动的动态问题推荐
+### 3. 📚 AI Agent 核心技术栈全景知识库与多智能体实战
+- **10 篇生产级 AI Agent 深度架构长文入库**：
+  - 全面涵盖智能体四元认知模型 (Perception-Planning-Action-Memory)、Function Calling 与参数自省、LangGraph 有向状态图与循环反思、Multi-Agent 协同框架 (AutoGen/MetaGPT/CrewAI)、分层记忆系统 (Mem0 事实断言)、CoT/ToT/GoT 规划推理、Docker 安全代码执行沙箱、Agentic RAG / Self-RAG 反思纠错、全链路可观测性 (LangSmith/Phoenix) 与生产防腐熔断设计；
+  - 全量文章自动切片构建 80+ 向量知识库切片，支持向量语义即时检索与 AI 智能体问答溯源。
+
+### 4. 🔥 搜索热度与博文深度剖析驱动的动态推荐引擎
 - **全链路自动埋点与热度追踪**：
   - 数据库设计 `search_logs` 热度表，在 AI 提问、向量语义搜索、前台门户搜索全链路自动统计频次与时间权重。
 - **多维动态推荐引擎 (`recommendation_service.py`)**：
   - ① 全站高频热度搜索真实词；
-  - ② 热门高浏览博文根据标题结构化衍生的问题（如《...》核心要点与技术细节）；
+  - ② 热门高浏览博文根据标题结构化衍生的问题与热搜概念；
   - ③ 高质量底层技术知识兜底题库。
-- **换一批轮转交互**：
-  - 前端抽屉内置旋转微动画与多候选池轮转采样，方便读者自由探索不同技术主题。
+- **换一批轮转交互与热搜概念动态更新**：
+  - 前端抽屉内置旋转微动画与多候选池轮转采样；语义检索弹窗标签基于全站热度实时更新。
 
-### 4. 🧮 优雅的 KaTeX 高精数学公式与紧凑型排版
+### 5. 🧮 优雅的 KaTeX 高精数学公式与紧凑型排版
 - **深度公式渲染与容错**：
   - 引入 `katex` 与 `marked-katex-extension`，完美支持多行 `$$...$$` 矩阵推导与行内 `$x$` 运算；
   - 智能兼容 ASCII 伪代码（如 `sqrt(d_k)`）与裸露 LaTeX（`\sqrt{d_k}`），全链路自动转译为美观的标准数学开根号 $\sqrt{d_k}$；
   - 彻底纠偏用户消息与对话框顶部的冗余行距，实现工业级原生像素对齐。
 
-### 5. 🔍 自然语言向量语义检索 (Semantic Search)
-- 突破传统 MySQL `LIKE %keyword%` 字面模糊匹配局限，即使不含完全相同的字眼，也能基于特征向量余弦相似度秒级召回最贴近的深度博文。
-
-### 6. ✍️ AI 智能创作与全量向量重构
-- **一键提取 TL;DR 核心摘要**：长文自动调用大模型压缩为 150 字精华并预测 3~5 个技术分类标签。
-- **全量知识库一键重构**：管理后台支持一键重切分与向量索引重建，进度实时反馈。
+### 6. 💬 论坛社区化互动、鉴权守卫与个人中心全能中枢
+- **全局强制登录导航守卫 (Global Navigation Auth Guard)**：
+  - 路由全局前置守卫严格把关，访问全站任何页面均强制重定向至 `/login`，已登录用户访问登录页自动回跳；严格保障论坛社区的交互严肃性与数据合规；
+  - 注册表单与「个人资料」弹窗达成 1:1 镜像对齐，规范支持「用户名、邮箱、个人签名、密码」一体化管理。
+- **点赞与评论登录鉴权保护**：
+  - 严格保护内容互动生态，仅登录用户方可点赞、收藏与发表技术见解；评论表单自动关联当前用户身份与头像。
+- **博文收藏中枢 (Favorites Management)**：
+  - MySQL 原生 `favorites` 表支撑，详情页支持一键收藏与实时切换；
+  - 顶栏用户头像下拉菜单内置「我的收藏」入口与专属 `UserFavoritesModal.vue` 管理弹窗，支持分类直达与取消收藏。
+- **我的点赞与创作者作品集 (Likes & Created Articles)**：
+  - 提供 `UserLikesModal.vue`（点赞博文列表、快速跳转与一键取消点赞）与 `UserArticlesModal.vue`（创作者文章管理、状态查看与快速编辑）。
+- **评论被回复实时消息提醒中枢 (Comment Reply Notification System)**：
+  - 数据库构建 `notifications` 模型，在有用户回复评论（携带 `parent_id`）时，后端自动捕获并向父评论作者推送结构化提醒；
+  - 顶栏下拉菜单展示动态未读消息小红点徽章，点击呼出 `UserNotificationsModal.vue` 弹窗，清晰呈现「谁回复了你」、「在哪篇文章」以及「回复内容与原评论摘要」，支持一键全部已读。
 
 ### 7. 🛡️ 企业级软件工程底层规范
+- **弹窗与抽屉双重防线防抖 (Zero Layout Shift)**：
+  - 针对 Element Plus `useLockScreen` 自动隐藏滚动条并动态计算 padding 导致的页面左移顽疾，采用「全局 CSS 强制锁定滚动条 (`overflow-y: scroll !important`) + 所有弹窗抽屉显式配置 `:lock-scroll="false"`」的双层防御架构，实现 100% 页面稳固零晃动。
+- **时区与时间标准化**：注册时间全站统一绑定中国标准时间 (Asia/Shanghai, UTC+8)。
 - **FastAPI 异步高并发**：Pydantic V2 强类型契约模型、依赖注入 (DI) 系统、统一 RESTful 响应封包 `Result<T>` 与全局异常拦截器。
-- **RBAC 双角色权限体系**：JWT 无状态 Token 鉴权、Bcrypt 加盐安全哈希密码、路由守卫拦截。
+- **RBAC 角色权限体系**：JWT 无状态 Token 鉴权、Bcrypt 加盐安全哈希密码、路由守卫拦截；管理控制台仅对管理员可见。
 - **Vue 3 + TypeScript 强类型前端**：Element Plus 组件库、Pinia 状态管理、Vite 热重载与秒级编译。
 - **黑曜石与翡翠绿设计语言**：纯正 Obsidian (`#18181b`) 与 Emerald Green (`#059669` / `#10b981`) 配色，零紫色杂色，高对比度视觉质感。
 - **界面文案缩写与本地化规范**：彻底清除中文标题与表单项中形如 `(LLM Provider)`、`(Model ID)`、`(Pipeline)` 的生硬英译后缀；规范保留 `DeepSeek`、`OpenAI`、`API Key`、`Base URL` 等主流厂商与技术协议缩写。
@@ -72,10 +88,12 @@ D:\blog\
 │   │   ├── api/                     # RESTful API 路由分层 (v1)
 │   │   │   ├── v1/
 │   │   │   │   ├── auth.py          # JWT 登录注册与用户鉴权
-│   │   │   │   ├── articles.py      # 文章 CRUD、点赞、门户搜索与热度埋点
+│   │   │   │   ├── articles.py      # 文章 CRUD、点赞、我的创作与点赞、门户搜索与热度埋点
 │   │   │   │   ├── categories.py    # 分类管理
 │   │   │   │   ├── tags.py          # 标签管理
-│   │   │   │   ├── comments.py      # 树形递归嵌套评论
+│   │   │   │   ├── comments.py      # 树形递归嵌套评论与回复自动派发提醒
+│   │   │   │   ├── favorites.py     # 博文收藏管理
+│   │   │   │   ├── notifications.py # 评论回复消息提醒与已读管理
 │   │   │   │   ├── ai_assistant.py  # RAG 问答、SSE 推流、模型拉取、动态推荐、历史记录
 │   │   │   │   └── statistics.py    # 仪表盘运营数据大屏
 │   │   │   └── deps.py              # RBAC 鉴权与当前用户依赖注入
@@ -90,11 +108,14 @@ D:\blog\
 │   │   │   ├── category.py          # 分类模型
 │   │   │   ├── tag.py               # 标签模型
 │   │   │   ├── comment.py           # 评论模型
+│   │   │   ├── favorite.py          # 收藏模型
+│   │   │   ├── article_like.py      # 点赞模型
+│   │   │   ├── notification.py      # 评论回复提醒模型
 │   │   │   ├── article_chunk.py     # RAG 向量切片模型
 │   │   │   ├── search_log.py        # 全站搜索与提问热度追踪模型
 │   │   │   ├── ai_chat_message.py   # 用户专属 AI 历史对话持久化模型
 │   │   │   └── system_setting.py    # 系统动态配置
-│   │   ├── schemas/                 # Pydantic DTO 强类型请求响应契约
+│   │   ├── schemas/                 # Pydantic DTO 强类型请求响应契约 (article, user, comment, notification 等)
 │   │   └── ai_engine/               # 核心 AI / 算法落地模块 (工业级标准库落地)
 │   │       ├── chunking.py          # 基于 LangChain 的标题感知递归切块器
 │   │       ├── embedding.py         # 基于 Scikit-Learn 的 128 维特征向量化
@@ -108,17 +129,22 @@ D:\blog\
 │
 ├── frontend/                        # 前端工程 (Vue 3 + Vite + TypeScript)
 │   ├── src/
-│   │   ├── api/                     # Axios 请求封装与 AI 接口模块
+│   │   ├── api/                     # Axios 请求封装 (article, auth, comment, favorite, notification, ai)
 │   │   ├── components/              # 核心业务组件
-│   │   │   ├── Navbar.vue           # 响应式全局顶栏
+│   │   │   ├── Navbar.vue           # 响应式全局顶栏 (未读消息徽章与用户全能中枢)
 │   │   │   ├── AiChatDrawer.vue     # 核心亮点：AI 智能体对话抽屉 (SSE 打字机/动态推荐/历史恢复)
 │   │   │   ├── SemanticSearchModal.vue # 向量语义搜索弹窗
-│   │   │   └── MarkdownViewer.vue   # Markdown 渲染器 (代码高亮与 KaTeX 数学公式渲染)
+│   │   │   ├── MarkdownViewer.vue   # Markdown 渲染器 (代码高亮与 KaTeX 数学公式渲染)
+│   │   │   ├── UserProfileModal.vue # 个人资料弹窗
+│   │   │   ├── UserFavoritesModal.vue # 我的收藏弹窗
+│   │   │   ├── UserLikesModal.vue   # 我的点赞弹窗
+│   │   │   ├── UserArticlesModal.vue # 我的创作文章弹窗
+│   │   │   └── UserNotificationsModal.vue # 评论回复提醒弹窗
 │   │   ├── views/
-│   │   │   ├── portal/              # 博客前台门户 (Home, ArticleDetail, Categories)
+│   │   │   ├── portal/              # 博客论坛前台门户 (Home, ArticleDetail, Categories)
 │   │   │   ├── admin/               # 后台管理中枢 (Dashboard, Articles, Edit, AiSettings)
-│   │   │   └── auth/                # 登录注册页面
-│   │   ├── router/                  # 路由配置与 RBAC 权限守卫
+│   │   │   └── auth/                # 登录注册页面 (1:1 镜像个人资料字段)
+│   │   ├── router/                  # 路由配置与全局登录鉴权守卫
 │   │   └── stores/                  # Pinia 状态管理
 │   ├── package.json
 │   └── vite.config.ts
@@ -168,6 +194,9 @@ npm run dev
 8. **高精微交互与大模型凭证安全可视化**：对后台模型拉取动作优化微动画体系，消除组件库默认冗余旋转圈，统一由前置图标承载匀速旋转动效；针对企业大模型 API 密钥，结合权限校验与前端密码域查看切换（`show-password`），实现安全防窥与管理员一键显隐验真的平衡；全面规范中台界面文案，剥离冗余括号英文注记，保留标准厂商与协议标识。
 9. **全局界面排版纯净度与科技美学收敛**：全面重构前台与管理中台标签视觉系统，彻底剥离历史硬编码的 `#` 前缀符号，恢复纯粹的技术领域分类语义；移除卡片标题中的非标准表情符号（如 `🤖`），统一采用黑曜石沉浸底色搭配翡翠绿微光的高精度科技排版系统，确保各端呈现高度克制、专业与统一的企业级质感。
 10. **极简主义前台视觉重塑与动作解耦**：彻底剥离首页 Hero 横幅沉重的深黑底色，重塑为通透纯净的企业级白卡设计，对齐高对比度现代字体排版；裁撤与全局导航重复的「与 AI 智能体实时对话」及「向量语义搜索」按钮，极大降低初次访问认知负荷，全面统一并收敛用户交互心智至全局顶栏中枢。
+11. **多重安全鉴权凭证兼容与无感认证**：构建基于 BCrypt (12轮动态加盐) 的工业级密码防护底座；认证网关创新支持「用户名」、「绑定邮箱」与「用户昵称」三凭证混合智能路由识别，读者无需死记生硬账号即可平滑登录，大幅提升认证弹性与用户留存体验。
+12. **多端用户中心与个性签名资料闭环**：在前台与管理中台顶栏用户下拉菜单统一挂载「个人资料」交互入口，研制独立 `UserProfileModal` 弹窗组件；剔除多余角色标签与符号前缀，统一聚焦「用户名」主身份标识并扩展「个人签名」能力，打通 `PUT /api/v1/auth/me` 接口与 Pinia 状态树，实现资料修改、个性表达与安全凭证更新的端到端即时响应闭环。
+13. **社区互动闭环、评论回复提醒与防抖路由中枢**：针对论坛社区的长效互动，设计 `notifications` 数据模型与服务端评论树回复自动通知机制，当他人回复评论时自动生成结构化通知并向前端推送动态未读红点徽章；顶栏用户中心深度集成「我的点赞」、「我的创作」与「消息提醒」全功能管理弹窗；实施前端全局路由鉴权守卫，严密防护未登录操作；采用 CSS 强制锁定滚动槽与全弹窗 `:lock-scroll="false"` 双重防线，彻底根除弹窗打开时的网页横向左移抖动顽疾。
 
 ### 高频面试深挖问题速查
 - **Q1: 为什么不直接用传统 LIKE 模糊查询，而要用稠密向量检索？**

@@ -16,7 +16,6 @@
         <nav class="nav-links">
           <router-link to="/" class="nav-item">首页</router-link>
           <router-link to="/categories" class="nav-item">分类与标签</router-link>
-          <a class="nav-item" href="javascript:void(0)" @click="aiChatStore.openSearch()">RAG 知识库</a>
         </nav>
       </div>
 
@@ -36,7 +35,7 @@
             <span>AI 智能体</span>
           </button>
 
-          <router-link to="/admin/dashboard" class="nav-action-link">
+          <router-link v-if="userStore.isAdmin" to="/admin/dashboard" class="nav-action-link">
             控制台
           </router-link>
         </div>
@@ -47,11 +46,28 @@
             <el-dropdown trigger="click">
               <div class="user-avatar-pill">
                 <el-avatar :size="28" :src="userStore.user?.avatar || '/user-avatar.svg'" />
-                <span class="user-name">{{ userStore.user?.nickname }}</span>
+                <span class="user-name">{{ userStore.user?.username || userStore.user?.nickname }}</span>
               </div>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item v-if="userStore.isAdmin" @click="$router.push('/admin/dashboard')">
+                  <el-dropdown-item @click="profileModalRef?.open()">
+                    <el-icon><User /></el-icon> 个人资料
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="favoritesModalRef?.open()">
+                    <el-icon><Star /></el-icon> 我的收藏
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="likesModalRef?.open()">
+                    <el-icon><Pointer /></el-icon> 我的点赞
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="articlesModalRef?.open()">
+                    <el-icon><Document /></el-icon> 我的创作
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="notificationsModalRef?.open()">
+                    <el-icon><Bell /></el-icon>
+                    <span>消息提醒</span>
+                    <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="dropdown-badge" />
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="userStore.isAdmin" divided @click="$router.push('/admin/dashboard')">
                     <el-icon><DataAnalysis /></el-icon> 运营看板
                   </el-dropdown-item>
                   <el-dropdown-item v-if="userStore.isAdmin" @click="$router.push('/admin/article/new')">
@@ -73,17 +89,51 @@
         </div>
       </div>
     </div>
+
+    <!-- 个人资料弹窗 -->
+    <UserProfileModal ref="profileModalRef" />
+    <!-- 个人收藏弹窗 -->
+    <UserFavoritesModal ref="favoritesModalRef" />
+    <!-- 我的点赞弹窗 -->
+    <UserLikesModal ref="likesModalRef" />
+    <!-- 我的创作弹窗 -->
+    <UserArticlesModal ref="articlesModalRef" />
+    <!-- 消息回复提醒弹窗 -->
+    <UserNotificationsModal ref="notificationsModalRef" @updated="refreshUnreadCount" />
   </header>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import { Search, DataAnalysis, EditPen } from '@element-plus/icons-vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { Search, DataAnalysis, EditPen, User, Star, Pointer, Document, Bell } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useAiChatStore } from '@/stores/aiChat'
+import { getUnreadNotificationCountApi } from '@/api/notification'
+import UserProfileModal from '@/components/UserProfileModal.vue'
+import UserFavoritesModal from '@/components/UserFavoritesModal.vue'
+import UserLikesModal from '@/components/UserLikesModal.vue'
+import UserArticlesModal from '@/components/UserArticlesModal.vue'
+import UserNotificationsModal from '@/components/UserNotificationsModal.vue'
 
 const userStore = useUserStore()
 const aiChatStore = useAiChatStore()
+const profileModalRef = ref<InstanceType<typeof UserProfileModal> | null>(null)
+const favoritesModalRef = ref<InstanceType<typeof UserFavoritesModal> | null>(null)
+const likesModalRef = ref<InstanceType<typeof UserLikesModal> | null>(null)
+const articlesModalRef = ref<InstanceType<typeof UserArticlesModal> | null>(null)
+const notificationsModalRef = ref<InstanceType<typeof UserNotificationsModal> | null>(null)
+
+const unreadCount = ref(0)
+
+const refreshUnreadCount = async () => {
+  if (!userStore.isLoggedIn) return
+  try {
+    const count = await getUnreadNotificationCountApi()
+    unreadCount.value = count
+  } catch {
+    // ignore
+  }
+}
 
 // 快捷键 Ctrl+K 打开语义搜索
 const handleKeyDown = (e: KeyboardEvent) => {
@@ -94,6 +144,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
+  refreshUnreadCount()
   window.addEventListener('keydown', handleKeyDown)
 })
 
@@ -324,5 +375,9 @@ onUnmounted(() => {
   .nav-links {
     gap: 1rem;
   }
+}
+
+.dropdown-badge {
+  margin-left: 8px;
 }
 </style>

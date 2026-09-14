@@ -10,7 +10,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="面向 AI 算法与大模型应用开发 (RAG/Agent) 的企业级个人博客知识库系统 API 契约文档",
+    description="面向 AI 算法与大模型应用开发 (RAG/Agent) 的企业级博客论坛知识库系统 API 契约文档",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"

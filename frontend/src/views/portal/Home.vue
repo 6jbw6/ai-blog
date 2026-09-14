@@ -11,10 +11,10 @@
             <span class="pulse-tag">AI Agent 就绪</span>
           </div>
           <div class="hero-text">
-            <h1 class="hero-title">欢迎来到 AI-Blog 个人技术中枢</h1>
+            <h1 class="hero-title">欢迎来到 AI-Blog 博客论坛</h1>
             <p class="hero-desc">
-              专注 <strong>AI 大模型应用开发 (LLM/Agent/RAG)</strong> 与 <strong>企业级软件工程架构</strong> 实战。
-              本博客所有文章均已接入自研向量知识库，配有 <strong>AI 智能体</strong>，随时为你答疑解惑！
+              专注 <strong>AI 大模型应用开发</strong> 与 <strong>企业级软件工程架构</strong> 实战。
+              本论坛所有文章均已接入自研向量知识库，配有 <strong>AI 智能体</strong>，随时为你答疑解惑！
             </p>
           </div>
         </div>

@@ -6,8 +6,8 @@ from pydantic import BaseModel, EmailStr, Field
 class CommentCreate(BaseModel):
     article_id: int
     parent_id: Optional[int] = None
-    user_name: str = Field(..., min_length=1, max_length=64)
-    user_email: EmailStr
+    user_name: Optional[str] = Field(None, max_length=64)
+    user_email: Optional[EmailStr] = None
     content: str = Field(..., min_length=1, max_length=1000)
 
 

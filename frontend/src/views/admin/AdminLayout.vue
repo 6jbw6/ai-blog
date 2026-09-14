@@ -73,6 +73,9 @@
             </div>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item @click="profileModalRef?.open()">
+                  <el-icon><User /></el-icon> 个人资料
+                </el-dropdown-item>
                 <el-dropdown-item @click="$router.push('/')">查看前台门户</el-dropdown-item>
                 <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
@@ -86,10 +89,14 @@
         <router-view />
       </main>
     </div>
+
+    <!-- 个人资料弹窗 -->
+    <UserProfileModal ref="profileModalRef" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   DataAnalysis,
@@ -98,12 +105,15 @@ import {
   Folder,
   ChatLineSquare,
   Cpu,
-  Back
+  Back,
+  User
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import UserProfileModal from '@/components/UserProfileModal.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const profileModalRef = ref<InstanceType<typeof UserProfileModal> | null>(null)
 
 const handleLogout = () => {
   userStore.logout()

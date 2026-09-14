@@ -13,6 +13,7 @@ class User(Base):
     email = Column(String(128), unique=True, index=True, nullable=False, comment="电子邮箱")
     nickname = Column(String(64), nullable=False, default="博主", comment="展示昵称")
     avatar = Column(String(255), nullable=True, comment="头像URL")
+    bio = Column(String(255), nullable=True, default="", comment="个人签名")
     role = Column(String(32), nullable=False, default="reader", comment="角色: admin|reader")
     is_active = Column(Boolean, nullable=False, default=True, comment="是否激活")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
