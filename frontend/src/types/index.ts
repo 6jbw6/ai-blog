@@ -116,3 +116,11 @@ export interface LlmConfig {
   top_k: number
   similarity_threshold: number
 }
+
+export interface AiChatMessageItem {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  citations?: CitationItem[]
+  created_at?: string
+}

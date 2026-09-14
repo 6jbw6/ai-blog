@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
@@ -10,6 +11,14 @@ class AiSummaryRequest(BaseModel):
 class AiSummaryResponse(BaseModel):
     summary: str
     suggested_tags: List[str] = []
+
+
+class AiChatMessageItem(BaseModel):
+    id: int
+    role: str
+    content: str
+    citations: Optional[List[Dict[str, Any]]] = None
+    created_at: Optional[datetime] = None
 
 
 class ChatMessage(BaseModel):

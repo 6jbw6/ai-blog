@@ -2,14 +2,17 @@ import json
 import random
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from app.core.database import get_db
 from app.core.response import Result, BusinessException
-from app.api.deps import require_admin
+from app.api.deps import require_admin, get_current_user, get_optional_user
+from app.models.user import User
 from app.models.search_log import SearchLog
+from app.models.ai_chat_message import AiChatMessage
 from app.models.article import Article
 from app.models.article_chunk import ArticleChunk
 from app.schemas.ai import (
@@ -18,7 +21,8 @@ from app.schemas.ai import (
     AiSummaryResponse,
     SemanticSearchRequest,
     SemanticSearchResultItem,
-    LlmConfigSchema
+    LlmConfigSchema,
+    AiChatMessageItem
 )
 from app.ai_engine.rag_service import rag_service
 from app.ai_engine.recommendation_service import record_search_query, get_dynamic_recommended_questions
@@ -30,7 +34,8 @@ router = APIRouter(prefix="/ai", tags=["AI 算法与大模型知识库 (AI Core)
 @router.post("/ask", summary="AI 智能体 / RAG 知识库问答 (全链路 SSE 流式交互)")
 async def ask_knowledge_base(
     payload: AiAskRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user)
 ):
     """
     全链路 SSE (Server-Sent Events) 打字机流式交互接口
@@ -50,11 +55,14 @@ async def ask_knowledge_base(
     # 累加搜索热度，驱动动态问题推荐
     record_search_query(db, payload.question, search_type="ai_ask")
 
+    user_id = user.id if user else None
+
     # 生成异步 SSE 生成器
     stream_generator = rag_service.stream_rag_chat(
         db=db,
         question=payload.question,
-        history=history_dicts
+        history=history_dicts,
+        user_id=user_id
     )
 
     return StreamingResponse(
@@ -67,6 +75,53 @@ async def ask_knowledge_base(
             "X-Accel-Buffering": "no"  # 禁用 Nginx 等中间代理缓冲，确保低延迟秒级推送
         }
     )
+
+
+@router.get("/history", response_model=Result[List[AiChatMessageItem]], summary="拉取当前登录账号最近的 AI 对话历史")
+def get_chat_history(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    拉取当前账号最近的 10 次对话 (最多 20 条按时间正序排列的问答记录)
+    """
+    max_messages = limit * 2
+    records = (
+        db.query(AiChatMessage)
+        .filter(AiChatMessage.user_id == current_user.id)
+        .order_by(desc(AiChatMessage.id))
+        .limit(max_messages)
+        .all()
+    )
+    records.reverse()
+    items = []
+    for r in records:
+        cits = []
+        if r.citations:
+            try:
+                cits = json.loads(r.citations)
+            except Exception:
+                cits = []
+        items.append(AiChatMessageItem(
+            id=r.id,
+            role=r.role,
+            content=r.content,
+            citations=cits,
+            created_at=r.created_at
+        ))
+    return Result.success(data=items)
+
+
+@router.delete("/history", response_model=Result[None], summary="清空当前登录账号的全部 AI 对话历史")
+def clear_chat_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """清空当前账号在数据库中的全部 AI 问答交互记录"""
+    db.query(AiChatMessage).filter(AiChatMessage.user_id == current_user.id).delete()
+    db.commit()
+    return Result.success(message="历史会话已清空")
 
 
 @router.get("/recommended-questions", response_model=Result[List[str]], summary="根据搜索热度与热门博文动态推荐 AI 提问")

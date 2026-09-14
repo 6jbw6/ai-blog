@@ -1,5 +1,5 @@
 import { request } from './request'
-import type { AiSummaryResponse, CitationItem, LlmConfig, SemanticSearchResultItem } from '@/types'
+import type { AiChatMessageItem, AiSummaryResponse, CitationItem, LlmConfig, SemanticSearchResultItem } from '@/types'
 
 export const generateSummaryApi = (data: { content: string; title?: string }) => {
   return request<AiSummaryResponse>({
@@ -47,6 +47,21 @@ export const getRecommendedQuestionsApi = (limit: number = 8, refresh: boolean =
   })
 }
 
+export const getChatHistoryApi = (limit: number = 10) => {
+  return request<AiChatMessageItem[]>({
+    url: '/ai/history',
+    method: 'GET',
+    params: { limit }
+  })
+}
+
+export const clearChatHistoryApi = () => {
+  return request<null>({
+    url: '/ai/history',
+    method: 'DELETE'
+  })
+}
+
 /**
  * 前端原生 SSE 流式读取器 (用于 AI 智能体 / RAG 知识库问答)
  */
@@ -59,11 +74,17 @@ export async function streamRagChat(
   onError: (err: any) => void
 ) {
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+    const token = localStorage.getItem('access_token')
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
     const response = await fetch('/api/v1/ai/ask', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({ question, history })
     })
 

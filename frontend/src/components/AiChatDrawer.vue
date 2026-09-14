@@ -169,7 +169,7 @@ import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { useAiChatStore } from '@/stores/aiChat'
 import { useUserStore } from '@/stores/user'
-import { streamRagChat, getRecommendedQuestionsApi } from '@/api/ai'
+import { streamRagChat, getRecommendedQuestionsApi, getChatHistoryApi, clearChatHistoryApi } from '@/api/ai'
 import type { CitationItem } from '@/types'
 import MarkdownViewer from './MarkdownViewer.vue'
 
@@ -275,13 +275,55 @@ const refreshRecommendations = () => {
   fetchDynamicPrompts(true)
 }
 
+const isLoadingHistory = ref(false)
+
+// 自动拉取当前登录账号最近的 10 次对话历史
+const loadChatHistory = async () => {
+  if (!userStore.token || isLoadingHistory.value) return
+  isLoadingHistory.value = true
+  try {
+    const history = await getChatHistoryApi(10)
+    if (Array.isArray(history) && history.length > 0) {
+      messages.value = history.map(h => ({
+        role: h.role,
+        content: h.content,
+        citations: h.citations || []
+      }))
+      scrollToBottom()
+    }
+  } catch (err) {
+    console.warn('拉取 AI 历史对话失败:', err)
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
 onMounted(() => {
   fetchDynamicPrompts()
+  if (userStore.token) {
+    loadChatHistory()
+  }
 })
 
+// 当用户点开抽屉时，自动拉取最近 10 次历史会话
 watch(() => aiChatStore.isChatOpen, (isOpen) => {
-  if (isOpen && (allPrompts.value.length === 0 || displayedPrompts.value.length === 0)) {
-    fetchDynamicPrompts()
+  if (isOpen) {
+    if (allPrompts.value.length === 0 || displayedPrompts.value.length === 0) {
+      fetchDynamicPrompts()
+    }
+    if (messages.value.length === 0 && userStore.token) {
+      loadChatHistory()
+    }
+  }
+})
+
+// 监听账号切换或重新登录
+watch(() => userStore.token, (newToken) => {
+  if (newToken) {
+    messages.value = []
+    loadChatHistory()
+  } else {
+    messages.value = []
   }
 })
 
@@ -306,7 +348,15 @@ const scrollToBottom = () => {
   })
 }
 
-const clearHistory = () => {
+// 清空当前会话：前端清空，若已登录则同步删除后端数据库存储记录
+const clearHistory = async () => {
+  if (userStore.token) {
+    try {
+      await clearChatHistoryApi()
+    } catch (err) {
+      console.warn('清空后端对话历史失败:', err)
+    }
+  }
   messages.value = []
 }
 

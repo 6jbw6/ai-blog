@@ -1,5 +1,5 @@
 import json
-from typing import List, Dict, Any, AsyncGenerator
+from typing import List, Dict, Any, AsyncGenerator, Optional
 from sqlalchemy.orm import Session
 from app.models.article import Article
 from app.models.article_chunk import ArticleChunk
@@ -131,7 +131,8 @@ class RAGService:
         self,
         db: Session,
         question: str,
-        history: List[Dict[str, str]]
+        history: List[Dict[str, str]],
+        user_id: Optional[int] = None
     ) -> AsyncGenerator[str, None]:
         """
         RAG 知识库问答核心引擎 (全链路 SSE 流式生成 + 知识溯源)
@@ -204,13 +205,43 @@ class RAGService:
 
         messages.append({"role": "user", "content": question})
 
+        full_reply_tokens: List[str] = []
+
         # 4. 流式生成 Token 并封装 SSE 协议包
         async for token in self.llm.stream_chat(messages):
+            full_reply_tokens.append(token)
             yield f"data: {json.dumps({'type': 'token', 'content': token}, ensure_ascii=False)}\n\n"
 
         # 5. 生成结束后，发射引用溯源元数据包
         yield f"data: {json.dumps({'type': 'citations', 'citations': citations}, ensure_ascii=False)}\n\n"
         yield "data: {\"type\": \"done\"}\n\n"
+
+        # 6. 已登录账号对话自动持久化至用户专属历史记录
+        if user_id:
+            try:
+                full_reply = "".join(full_reply_tokens).strip()
+                from datetime import datetime
+                from app.core.database import SessionLocal
+                from app.models.ai_chat_message import AiChatMessage
+
+                with SessionLocal() as db_session:
+                    user_msg = AiChatMessage(
+                        user_id=user_id,
+                        role="user",
+                        content=question,
+                        created_at=datetime.utcnow()
+                    )
+                    asst_msg = AiChatMessage(
+                        user_id=user_id,
+                        role="assistant",
+                        content=full_reply,
+                        citations=json.dumps(citations, ensure_ascii=False) if citations else None,
+                        created_at=datetime.utcnow()
+                    )
+                    db_session.add_all([user_msg, asst_msg])
+                    db_session.commit()
+            except Exception as e:
+                logger.error(f"持久化 AI 对话历史失败: {e}")
 
 
 rag_service = RAGService()
