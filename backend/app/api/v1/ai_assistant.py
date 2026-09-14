@@ -170,16 +170,11 @@ def reindex_all_articles(
     return Result.success(data=result, message="全量向量切片与索引重构完成")
 
 
-@router.get("/config", response_model=Result[LlmConfigSchema], summary="获取当前大模型与 RAG 运行参数")
-def get_ai_config():
-    # 对 API Key 进行安全掩码脱敏
-    masked_key = ""
-    if settings.LLM_API_KEY:
-        masked_key = settings.LLM_API_KEY[:4] + "****" + settings.LLM_API_KEY[-4:] if len(settings.LLM_API_KEY) > 8 else "****"
-
+@router.get("/config", response_model=Result[LlmConfigSchema], summary="获取当前大模型与 RAG 运行参数 (管理员)")
+def get_ai_config(_admin = Depends(require_admin)):
     config_data = LlmConfigSchema(
         provider=settings.LLM_PROVIDER,
-        api_key=masked_key,
+        api_key=settings.LLM_API_KEY or "",
         base_url=settings.LLM_BASE_URL,
         model=settings.LLM_MODEL,
         top_k=settings.RAG_TOP_K,
@@ -228,9 +223,11 @@ def update_ai_config(
         "LLM_PROVIDER": payload.provider
     }
 
-    if payload.api_key and not payload.api_key.startswith("****"):
-        settings.LLM_API_KEY = payload.api_key
-        env_updates["LLM_API_KEY"] = payload.api_key
+    if payload.api_key:
+        clean_key = payload.api_key.strip()
+        if clean_key and not clean_key.startswith("****") and "****" not in clean_key:
+            settings.LLM_API_KEY = clean_key
+            env_updates["LLM_API_KEY"] = clean_key
     if payload.base_url:
         settings.LLM_BASE_URL = payload.base_url
         env_updates["LLM_BASE_URL"] = payload.base_url

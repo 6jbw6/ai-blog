@@ -68,11 +68,11 @@
               <el-button
                 type="primary"
                 plain
-                :loading="fetchingModels"
+                :disabled="fetchingModels"
                 @click="() => handleFetchModels(false)"
                 title="向 Base URL 端点拉取当前支持的模型列表"
               >
-                <el-icon><Refresh /></el-icon>
+                <el-icon :class="{ 'is-spinning': fetchingModels }"><Refresh /></el-icon>
                 <span>拉取模型列表</span>
               </el-button>
             </div>
@@ -293,6 +293,19 @@ onMounted(() => {
 
 .model-select {
   flex: 1;
+}
+
+.is-spinning {
+  animation: spin-refresh 0.9s linear infinite;
+}
+
+@keyframes spin-refresh {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .field-hint {
