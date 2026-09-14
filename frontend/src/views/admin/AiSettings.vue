@@ -3,20 +3,20 @@
     <div class="page-title-row">
       <div>
         <h2 class="title">AI 算法引擎与大模型中枢配置</h2>
-        <p class="subtitle">统一管理自定义 LLM 模型接入端点、在线拉取模型列表、配置 RAG 向量检索超参数及知识库全量索引重构</p>
+        <p class="subtitle">统一管理自定义大模型接入端点、在线拉取模型列表、配置向量检索超参数及知识库全量索引重构</p>
       </div>
     </div>
 
     <div class="settings-grid">
       <!-- 大模型接入策略卡片 -->
       <div class="setting-card">
-        <h3 class="card-title">🤖 自定义大模型服务接入 (LLM Provider)</h3>
+        <h3 class="card-title">🤖 自定义大模型服务接入</h3>
         <p class="card-desc">
           本系统基于标准 OpenAI 兼容协议构建，支持任意云端或私有化大模型服务（如魔芯科技、DeepSeek、SiliconFlow、OpenAI、阿里云百炼等）。输入 Base URL 与 API Key 后可直接在线拉取可用模型列表。
         </p>
 
         <el-form :model="configForm" label-position="top">
-          <el-form-item label="自定义接入商名称 (Provider)">
+          <el-form-item label="自定义接入商名称">
             <el-input
               v-model="configForm.provider"
               placeholder="请输入接入商名称，例如：魔芯科技 / DeepSeek / SiliconFlow / OpenAI / 阿里云百炼"
@@ -47,7 +47,7 @@
             </el-col>
           </el-row>
 
-          <el-form-item label="模型选择 (Model ID)">
+          <el-form-item label="模型选择">
             <div class="model-select-row">
               <el-select
                 v-model="configForm.model"
@@ -81,9 +81,9 @@
             </div>
           </el-form-item>
 
-          <h4 class="sub-title">🎯 RAG 向量知识库检索超参数</h4>
+          <h4 class="sub-title">🎯 向量知识库检索超参数</h4>
 
-          <el-form-item label="Top-K 召回切片数量 (推荐 3~6)">
+          <el-form-item label="召回切片数量 (推荐 3~6)">
             <el-slider v-model="configForm.top_k" :min="1" :max="10" show-input />
           </el-form-item>
 
@@ -107,13 +107,13 @@
 
       <!-- 知识库向量重构操作卡片 -->
       <div class="setting-card">
-        <h3 class="card-title">⚡ 知识库全量向量重构 (RAG Indexing)</h3>
+        <h3 class="card-title">⚡ 知识库全量向量重构</h3>
         <p class="card-desc">
-          当批量导入外部 Markdown 文档或调整分块大小（Chunk Size）后，点击下方按钮将全量重新切分博文并计算 128 维嵌入特征向量。
+          当批量导入外部 Markdown 文档或调整分块大小后，点击下方按钮将全量重新切分博文并计算 128 维嵌入特征向量。
         </p>
 
         <div class="rag-pipeline-box">
-          <h4 class="pipeline-title">知识库数据流管道 (Pipeline):</h4>
+          <h4 class="pipeline-title">知识库数据流管道:</h4>
           <ol class="pipeline-steps">
             <li><strong>Markdown 解析</strong>：提取多级标题与段落边界</li>
             <li><strong>标题感知递归切块</strong>：保留 60 字符重叠步长防语义断裂</li>

@@ -55,7 +55,7 @@
       <!-- 顶栏 -->
       <header class="admin-topbar">
         <div class="topbar-left">
-          <span class="page-current-title">企业级控制台 · RBAC 管理中枢</span>
+          <span class="page-current-title">企业级控制台 · 权限管理中枢</span>
         </div>
 
         <div class="topbar-right">
@@ -63,7 +63,7 @@
             🟢 MySQL 8.0 运行中
           </el-tag>
           <el-tag type="success" effect="plain" round>
-            ⚡ RAG 知识库就绪
+            ⚡ 向量知识库就绪
           </el-tag>
 
           <el-dropdown trigger="click">
