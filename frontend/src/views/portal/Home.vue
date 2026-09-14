@@ -16,14 +16,6 @@
               专注 <strong>AI 大模型应用开发 (LLM/Agent/RAG)</strong> 与 <strong>企业级软件工程架构</strong> 实战。
               本博客所有文章均已接入自研向量知识库，配有 <strong>AI 智能体</strong>，随时为你答疑解惑！
             </p>
-            <div class="hero-action-buttons">
-              <el-button type="primary" size="large" @click="aiChatStore.openChat()">
-                🤖 与 AI 智能体实时对话
-              </el-button>
-              <el-button size="large" @click="aiChatStore.openSearch()">
-                🔍 向量语义搜索
-              </el-button>
-            </div>
           </div>
         </div>
       </section>
@@ -236,13 +228,13 @@ onMounted(() => {
 }
 
 .hero-banner {
-  background: linear-gradient(135deg, #09090b 0%, #18181b 60%, #27272a 100%);
-  border: 1px solid #3f3f46;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
   border-radius: 24px;
-  padding: 3rem 3.5rem;
-  color: #ffffff;
+  padding: 2.5rem 3.5rem;
+  color: #18181b;
   margin-bottom: 2.5rem;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .hero-content {
@@ -273,19 +265,20 @@ onMounted(() => {
   font-weight: 800;
   margin: 0 0 0.85rem 0;
   letter-spacing: -0.5px;
+  color: #18181b;
 }
 
 .hero-desc {
   font-size: 1.05rem;
-  color: #d4d4d8;
+  color: #52525b;
   line-height: 1.7;
-  margin: 0 0 1.75rem 0;
+  margin: 0;
   max-width: 980px;
 }
 
-.hero-action-buttons {
-  display: flex;
-  gap: 1rem;
+.hero-desc strong {
+  color: #18181b;
+  font-weight: 600;
 }
 
 .content-layout {
