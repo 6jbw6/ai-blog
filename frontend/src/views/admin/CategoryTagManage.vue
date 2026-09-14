@@ -41,11 +41,11 @@
           <el-table-column label="标签" min-width="140">
             <template #default="{ row }">
               <el-tag :color="row.color + '20'" :style="{ color: row.color, borderColor: row.color }">
-                #{{ row.name }}
+                {{ row.name }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="slug" label="别名 Slug" width="120" />
+          <el-table-column prop="slug" label="标识别名" width="120" />
           <el-table-column prop="article_count" label="博文数" width="80" align="center" />
           <el-table-column label="操作" width="120" align="center">
             <template #default="{ row }">

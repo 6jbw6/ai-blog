@@ -10,7 +10,7 @@
     <div class="settings-grid">
       <!-- 大模型接入策略卡片 -->
       <div class="setting-card">
-        <h3 class="card-title">🤖 自定义大模型服务接入</h3>
+        <h3 class="card-title">自定义大模型服务接入</h3>
         <p class="card-desc">
           本系统基于标准 OpenAI 兼容协议构建，支持任意云端或私有化大模型服务（如魔芯科技、DeepSeek、SiliconFlow、OpenAI、阿里云百炼等）。输入 Base URL 与 API Key 后可直接在线拉取可用模型列表。
         </p>

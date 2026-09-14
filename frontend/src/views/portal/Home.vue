@@ -84,7 +84,7 @@
                     class="article-tag"
                     :style="{ color: t.color, borderColor: t.color }"
                   >
-                    #{{ t.name }}
+                    {{ t.name }}
                   </span>
                 </div>
 

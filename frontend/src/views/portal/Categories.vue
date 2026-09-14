@@ -36,7 +36,7 @@
             :style="{ borderColor: tag.color, color: tag.color }"
             @click="selectTag(tag.id)"
           >
-            #{{ tag.name }} ({{ tag.article_count || 0 }})
+            {{ tag.name }} ({{ tag.article_count || 0 }})
           </span>
         </div>
       </section>
@@ -102,7 +102,7 @@ const currentFilterTitle = computed(() => {
   }
   if (selectedTagId.value) {
     const t = tags.value.find(x => x.id === selectedTagId.value)
-    return `标签：#${t ? t.name : ''} 下的文章`
+    return `标签：${t ? t.name : ''} 下的文章`
   }
   return '全部文章归档'
 })
