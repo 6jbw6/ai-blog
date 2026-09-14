@@ -4,10 +4,11 @@
     <div class="floating-ai-trigger" @click="openDrawer">
       <div class="ai-button-glow"></div>
       <div class="ai-button-inner">
-        <span class="ai-icon">🤖</span>
+        <img src="/bot-avatar.svg" alt="AI" class="trigger-bot-icon" />
       </div>
       <div class="ai-badge-label">
-        <span>AI 分身问答</span>
+        <span class="emerald-dot"></span>
+        <span>AI 智能体</span>
       </div>
     </div>
 
@@ -22,11 +23,11 @@
       <template #header>
         <div class="drawer-header">
           <div class="header-avatar-box">
-            <el-avatar :size="40" src="https://api.dicebear.com/7.x/bottts/svg?seed=admin" />
+            <el-avatar :size="40" src="/bot-avatar.svg" />
             <span class="online-indicator"></span>
           </div>
           <div class="header-info">
-            <h3 class="header-title">博主 AI 数字分身</h3>
+            <h3 class="header-title">AI 智能体</h3>
             <p class="header-subtitle">基于 RAG 知识库与大模型驱动 · 实时语义对齐</p>
           </div>
           <el-button size="small" text type="danger" @click="clearHistory">清空对话</el-button>
@@ -37,9 +38,9 @@
       <div class="chat-messages" ref="messagesContainer">
         <!-- 初始欢迎问候卡片 -->
         <div class="welcome-card">
-          <div class="welcome-badge">🚀 RAG 知识库问答助手</div>
+          <div class="welcome-badge">✦ RAG 知识库智能助手</div>
           <p class="welcome-text">
-            你好！我是博主的 AI 数字分身 🤖。我已全面索引了博主关于 <strong>Transformer 架构、LoRA 微调、RAG 向量检索</strong> 等领域的深度技术博文。
+            你好！我是博客的 <strong>AI 智能体</strong> 🤖。我已全面索引了关于 <strong>Transformer 架构、LoRA 微调、RAG 向量检索</strong> 等领域的深度技术博文。
           </p>
           <p class="welcome-hint">你可以随时直接向我提问，或点击下方推荐问题：</p>
           
@@ -64,14 +65,35 @@
           <div class="message-avatar">
             <el-avatar
               :size="32"
-              :src="msg.role === 'user' ? (userStore.user?.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user') : 'https://api.dicebear.com/7.x/bottts/svg?seed=admin'"
+              :src="msg.role === 'user' ? (userStore.user?.avatar || '/user-avatar.svg') : '/bot-avatar.svg'"
             />
           </div>
 
           <div class="message-bubble-wrapper">
             <div class="message-bubble">
-              <MarkdownViewer :content="msg.content" />
-              <span v-if="isStreaming && index === messages.length - 1" class="cursor-blink">|</span>
+              <!-- 用户消息直接渲染纯文本，杜绝 Markdown 的 <p> 标签产生顶部 1em 冗余空行 -->
+              <div v-if="msg.role === 'user'" class="user-text-content">{{ msg.content }}</div>
+
+              <!-- Assistant 消息 -->
+              <template v-else>
+                <!-- AI 思考中动效状态展示 -->
+                <div v-if="isStreaming && index === messages.length - 1 && !msg.content" class="ai-thinking-state">
+                  <div class="thinking-header-row">
+                    <span class="thinking-sparkle">✦</span>
+                    <span class="thinking-label">思考中</span>
+                    <span class="thinking-pulse-dots">
+                      <span class="dot dot-1"></span>
+                      <span class="dot dot-2"></span>
+                      <span class="dot dot-3"></span>
+                    </span>
+                  </div>
+                  <div class="thinking-desc">正在检索博文知识库切片并组织推理...</div>
+                </div>
+
+                <!-- 正式回复内容渲染 (集成数学公式 KaTeX 与紧凑 Chat 排版) -->
+                <MarkdownViewer v-else :content="msg.content" chat-mode />
+                <span v-if="isStreaming && index === messages.length - 1 && msg.content" class="cursor-blink">|</span>
+              </template>
             </div>
 
             <!-- 溯源引用卡片 (RAG 核心亮点) -->
@@ -204,12 +226,12 @@ const handleSend = async () => {
   const query = inputText.value.trim()
   if (!query || isStreaming.value) return
 
-  // 追加用户消息
+  // 追加用户消息 (无顶部空行，紧凑原生对齐)
   messages.value.push({ role: 'user', content: query })
   inputText.value = ''
   scrollToBottom()
 
-  // 准备 Assistant 占位消息
+  // 准备 Assistant 占位消息 (触发“思考中”动效)
   const assistantMsgIndex = messages.value.length
   messages.value.push({ role: 'assistant', content: '', citations: [] })
   isStreaming.value = true
@@ -236,7 +258,7 @@ const handleSend = async () => {
     },
     (err) => {
       console.error(err)
-      messages.value[assistantMsgIndex].content += '\n\n*(网络连接出现异常，请重试)*'
+      messages.value[assistantMsgIndex].content += '\n\n*(网络连接或大模型服务响应异常，请重试)*'
       isStreaming.value = false
       scrollToBottom()
     }
@@ -282,14 +304,17 @@ const handleSend = async () => {
   justify-content: center;
   box-shadow: 0 8px 20px rgba(24, 24, 27, 0.35);
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .floating-ai-trigger:hover .ai-button-inner {
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.1) rotate(4deg);
 }
 
-.ai-icon {
-  font-size: 1.8rem;
+.trigger-bot-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
 }
 
 .ai-badge-label {
@@ -301,6 +326,17 @@ const handleSend = async () => {
   font-weight: 600;
   color: #18181b;
   border: 1px solid #e4e4e7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.emerald-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 /* 抽屉样式 */
@@ -426,24 +462,101 @@ const handleSend = async () => {
   gap: 8px;
 }
 
+/* 用户气泡：消除顶部/底部空行与内边距错位 */
 .row-user .message-bubble {
   background: #18181b;
   color: #ffffff;
   border-radius: 16px 4px 16px 16px;
   padding: 10px 14px;
   box-shadow: 0 2px 8px rgba(24, 24, 27, 0.25);
+  overflow: hidden;
 }
 
-.row-user .message-bubble :deep(*) {
-  color: #ffffff !important;
+.user-text-content {
+  margin: 0;
+  padding: 0;
+  color: #ffffff;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
+/* 助手回复气泡 */
 .row-assistant .message-bubble {
   background: #ffffff;
   border: 1px solid #e4e4e7;
   border-radius: 4px 16px 16px 16px;
   padding: 12px 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* AI 思考中动效状态展示 */
+.ai-thinking-state {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.thinking-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thinking-sparkle {
+  color: #10b981;
+  font-size: 1rem;
+  animation: rotate-sparkle 2.5s linear infinite;
+}
+
+@keyframes rotate-sparkle {
+  0% { transform: rotate(0deg) scale(0.9); }
+  50% { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(0.9); }
+}
+
+.thinking-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #18181b;
+  letter-spacing: 0.5px;
+}
+
+.thinking-pulse-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+.thinking-pulse-dots .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #10b981;
+  display: inline-block;
+  animation: pulse-dot 1.4s ease-in-out infinite both;
+}
+
+.thinking-pulse-dots .dot-1 {
+  animation-delay: -0.32s;
+}
+
+.thinking-pulse-dots .dot-2 {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1.2); opacity: 1; }
+}
+
+.thinking-desc {
+  font-size: 0.78rem;
+  color: #71717a;
+  line-height: 1.4;
 }
 
 .cursor-blink {

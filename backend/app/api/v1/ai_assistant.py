@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -107,21 +108,60 @@ def get_ai_config():
     return Result.success(data=config_data)
 
 
+def _persist_llm_env(updates: dict[str, str]):
+    """将热更新的大模型参数安全持久化至本地 .env 文件，防止服务重启丢失"""
+    try:
+        env_path = Path(__file__).resolve().parents[3] / ".env"
+        if not env_path.exists():
+            return
+        content = env_path.read_text(encoding="utf-8")
+        lines = content.splitlines()
+        new_lines = []
+        found_keys = set()
+        for line in lines:
+            stripped = line.strip()
+            matched = False
+            for k, v in updates.items():
+                if stripped.startswith(f"{k}=") or stripped.startswith(f"# {k}="):
+                    new_lines.append(f"{k}={v}")
+                    found_keys.add(k)
+                    matched = True
+                    break
+            if not matched:
+                new_lines.append(line)
+        for k, v in updates.items():
+            if k not in found_keys:
+                new_lines.append(f"{k}={v}")
+        env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    except Exception:
+        pass
+
+
 @router.put("/config", response_model=Result[None], summary="动态配置大模型 API 与 RAG 策略 (管理员)")
 def update_ai_config(
     payload: LlmConfigSchema,
     _admin = Depends(require_admin)
 ):
-    """支持在线热切换大模型接入商 (DeepSeek/智谱/OpenAI/本地Mock)"""
+    """支持在线热切换大模型接入商 (DeepSeek/智谱/OpenAI) 并自动持久化至本地 .env"""
     settings.LLM_PROVIDER = payload.provider
+    env_updates: dict[str, str] = {
+        "LLM_PROVIDER": payload.provider
+    }
+
     if payload.api_key and not payload.api_key.startswith("****"):
         settings.LLM_API_KEY = payload.api_key
+        env_updates["LLM_API_KEY"] = payload.api_key
     if payload.base_url:
         settings.LLM_BASE_URL = payload.base_url
+        env_updates["LLM_BASE_URL"] = payload.base_url
     if payload.model:
         settings.LLM_MODEL = payload.model
+        env_updates["LLM_MODEL"] = payload.model
     settings.RAG_TOP_K = payload.top_k
     settings.RAG_SIMILARITY_THRESHOLD = payload.similarity_threshold
+
+    # 持久化至 .env
+    _persist_llm_env(env_updates)
 
     # 同步更新运行时 LLM 客户端
     rag_service.llm = rag_service.llm.__class__(
