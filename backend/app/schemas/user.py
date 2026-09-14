@@ -4,12 +4,12 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class UserLogin(BaseModel):
-    username: str = Field(..., min_length=3, max_length=64, description="用户名")
+    username: str = Field(..., min_length=1, max_length=64, description="用户名或邮箱")
     password: str = Field(..., min_length=6, max_length=64, description="密码")
 
 
 class UserRegister(BaseModel):
-    username: str = Field(..., min_length=3, max_length=64)
+    username: str = Field(..., min_length=1, max_length=64)
     password: str = Field(..., min_length=6, max_length=64)
     email: EmailStr
     nickname: Optional[str] = "博友"
