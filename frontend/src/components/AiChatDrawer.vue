@@ -42,16 +42,29 @@
           <p class="welcome-text">
             你好！我是博客的 <strong>AI 智能体</strong> 🤖。我已全面索引了关于 <strong>Transformer 架构、LoRA 微调、RAG 向量检索</strong> 等领域的深度技术博文。
           </p>
-          <p class="welcome-hint">你可以随时直接向我提问，或点击下方推荐问题：</p>
+          <div class="recommend-header">
+            <span class="welcome-hint">你可以随时向我提问，或探索热度推荐：</span>
+            <button
+              type="button"
+              class="refresh-btn"
+              :class="{ 'is-refreshing': isRefreshingPrompts }"
+              @click="refreshRecommendations"
+              title="换一批推荐问题"
+            >
+              <el-icon class="refresh-icon" :class="{ 'is-rotating': isRefreshingPrompts }"><Refresh /></el-icon>
+              <span>换一批</span>
+            </button>
+          </div>
           
           <div class="quick-questions">
             <button
-              v-for="(q, idx) in quickPrompts"
+              v-for="(q, idx) in displayedPrompts"
               :key="idx"
               class="quick-tag"
               @click="sendQuickQuestion(q)"
             >
-              {{ q }}
+              <span class="hot-badge">✦</span>
+              <span class="quick-text">{{ q }}</span>
             </button>
           </div>
         </div>
@@ -149,11 +162,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Refresh } from '@element-plus/icons-vue'
 import { useAiChatStore } from '@/stores/aiChat'
 import { useUserStore } from '@/stores/user'
-import { streamRagChat } from '@/api/ai'
+import { streamRagChat, getRecommendedQuestionsApi } from '@/api/ai'
 import type { CitationItem } from '@/types'
 import MarkdownViewer from './MarkdownViewer.vue'
 
@@ -174,12 +188,62 @@ interface ChatMsg {
 
 const messages = ref<ChatMsg[]>([])
 
-const quickPrompts = [
+const defaultPrompts = [
   'Transformer 自注意力为什么要除以 sqrt(d_k)？',
   '显存不够怎么微调大语言模型？',
   '多路召回相比单一向量检索有什么优势？',
   'LoRA 微调为什么在推理阶段零延迟？'
 ]
+
+const allPrompts = ref<string[]>([])
+const displayedPrompts = ref<string[]>([...defaultPrompts])
+const isRefreshingPrompts = ref(false)
+
+// 动态拉取推荐问题 (根据全站搜索热度与热门博文聚合生成)
+const fetchDynamicPrompts = async (isManualRefresh = false) => {
+  if (isRefreshingPrompts.value) return
+  isRefreshingPrompts.value = true
+  try {
+    const questions = await getRecommendedQuestionsApi(8, isManualRefresh)
+    if (Array.isArray(questions) && questions.length > 0) {
+      allPrompts.value = questions
+      displayedPrompts.value = questions.slice(0, 4)
+    }
+  } catch (err) {
+    console.warn('获取热度推荐问题失败，使用默认推荐池:', err)
+  } finally {
+    setTimeout(() => {
+      isRefreshingPrompts.value = false
+    }, 350)
+  }
+}
+
+// 换一批：优先在已加载候选池中轮转，若候选用尽则向后端发起重新采样
+const refreshRecommendations = () => {
+  if (allPrompts.value.length > 4) {
+    const current = displayedPrompts.value
+    const remaining = allPrompts.value.filter(p => !current.includes(p))
+    if (remaining.length >= 2) {
+      isRefreshingPrompts.value = true
+      setTimeout(() => {
+        displayedPrompts.value = remaining.slice(0, 4)
+        isRefreshingPrompts.value = false
+      }, 200)
+      return
+    }
+  }
+  fetchDynamicPrompts(true)
+}
+
+onMounted(() => {
+  fetchDynamicPrompts()
+})
+
+watch(() => aiChatStore.isChatOpen, (isOpen) => {
+  if (isOpen && (allPrompts.value.length === 0 || displayedPrompts.value.length === 0)) {
+    fetchDynamicPrompts()
+  }
+})
 
 // 监听外界传入的问题触发自动提问
 watch(() => aiChatStore.pendingQuestion, (newQ) => {
@@ -414,10 +478,48 @@ const handleSend = async () => {
   margin: 0 0 8px 0;
 }
 
-.welcome-hint {
+.recommend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.recommend-header .welcome-hint {
   font-size: 0.8rem;
   color: #71717a;
-  margin: 0 0 10px 0;
+  margin: 0;
+}
+
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.refresh-btn:hover {
+  color: #059669;
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.refresh-icon {
+  font-size: 0.8rem;
+  transition: transform 0.4s ease;
+}
+
+.refresh-icon.is-rotating {
+  transform: rotate(360deg);
 }
 
 .quick-questions {
@@ -427,6 +529,9 @@ const handleSend = async () => {
 }
 
 .quick-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   text-align: left;
   background: #ffffff;
   border: 1px solid #e4e4e7;
@@ -438,11 +543,28 @@ const handleSend = async () => {
   transition: all 0.2s;
 }
 
+.hot-badge {
+  color: #10b981;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.quick-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .quick-tag:hover {
   background: #18181b;
   color: #ffffff;
   border-color: #18181b;
   transform: translateX(4px);
+}
+
+.quick-tag:hover .hot-badge {
+  color: #34d399;
 }
 
 .message-row {

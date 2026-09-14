@@ -39,8 +39,16 @@ export const updateAiConfigApi = (data: LlmConfig) => {
   })
 }
 
+export const getRecommendedQuestionsApi = (limit: number = 8, refresh: boolean = false) => {
+  return request<string[]>({
+    url: '/ai/recommended-questions',
+    method: 'GET',
+    params: { limit, refresh }
+  })
+}
+
 /**
- * 前端原生 SSE 流式读取器 (用于博主 AI 数字分身 / RAG 知识库问答)
+ * 前端原生 SSE 流式读取器 (用于 AI 智能体 / RAG 知识库问答)
  */
 export async function streamRagChat(
   question: string,

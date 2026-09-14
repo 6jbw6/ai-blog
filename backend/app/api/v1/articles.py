@@ -11,6 +11,7 @@ from app.models.article_tag import article_tags
 from app.models.user import User
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticleListItem, ArticleDetail
 from app.ai_engine.rag_service import rag_service
+from app.ai_engine.recommendation_service import record_search_query
 
 router = APIRouter(prefix="/articles", tags=["文章管理 (Articles)"])
 
@@ -43,6 +44,7 @@ def list_articles(
     if keyword:
         kw = f"%{keyword}%"
         query = query.filter(or_(Article.title.like(kw), Article.summary.like(kw), Article.content.like(kw)))
+        record_search_query(db, keyword, search_type="portal_search")
 
     total = query.distinct().count()
     

@@ -1,4 +1,6 @@
 import json
+import random
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends
@@ -7,6 +9,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.response import Result, BusinessException
 from app.api.deps import require_admin
+from app.models.search_log import SearchLog
+from app.models.article import Article
+from app.models.article_chunk import ArticleChunk
 from app.schemas.ai import (
     AiAskRequest,
     AiSummaryRequest,
@@ -16,12 +21,13 @@ from app.schemas.ai import (
     LlmConfigSchema
 )
 from app.ai_engine.rag_service import rag_service
+from app.ai_engine.recommendation_service import record_search_query, get_dynamic_recommended_questions
 from app.core.config import settings
 
 router = APIRouter(prefix="/ai", tags=["AI 算法与大模型知识库 (AI Core)"])
 
 
-@router.post("/ask", summary="博主 AI 数字分身 / RAG 知识库问答 (全链路 SSE 流式交互)")
+@router.post("/ask", summary="AI 智能体 / RAG 知识库问答 (全链路 SSE 流式交互)")
 async def ask_knowledge_base(
     payload: AiAskRequest,
     db: Session = Depends(get_db)
@@ -40,6 +46,9 @@ async def ask_knowledge_base(
     - data: {"type": "done"}
     """
     history_dicts = [{"role": h.role, "content": h.content} for h in payload.history]
+
+    # 累加搜索热度，驱动动态问题推荐
+    record_search_query(db, payload.question, search_type="ai_ask")
 
     # 生成异步 SSE 生成器
     stream_generator = rag_service.stream_rag_chat(
@@ -60,6 +69,20 @@ async def ask_knowledge_base(
     )
 
 
+@router.get("/recommended-questions", response_model=Result[List[str]], summary="根据搜索热度与热门博文动态推荐 AI 提问")
+def get_recommended_questions(
+    limit: int = 6,
+    refresh: bool = False,
+    db: Session = Depends(get_db)
+):
+    """
+    根据搜索热度 (search_logs)、高浏览量博文、核心知识库底池动态输出推荐问题，
+    支持换一换 (refresh) 实时探索不同技术主题
+    """
+    questions = get_dynamic_recommended_questions(db=db, limit=limit, shuffle=True)
+    return Result.success(data=questions)
+
+
 @router.post("/summary", response_model=Result[AiSummaryResponse], summary="AI 自动生成文章 TL;DR 摘要与推荐标签")
 async def generate_ai_summary(payload: AiSummaryRequest):
     """供后台博文创作工作台调用：一键智能压缩长文为核心要点并预测分类标签"""
@@ -76,6 +99,7 @@ def semantic_search(
     突破传统数据库 LIKE 关键字字面匹配局限
     即便没有输入相同词眼，也能基于特征向量余弦相似度召回语义最贴近的技术博文
     """
+    record_search_query(db, payload.query, search_type="semantic_search")
     results = rag_service.semantic_search(db=db, query=payload.query, top_k=payload.top_k)
     items = [SemanticSearchResultItem(**r) for r in results]
     return Result.success(data=items)
