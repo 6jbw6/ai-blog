@@ -169,6 +169,18 @@ def semantic_search(
     """
     record_search_query(db, payload.query, search_type="semantic_search")
     results = rag_service.semantic_search(db=db, query=payload.query, top_k=payload.top_k)
+    # 实时累加命中检索博文的搜索热度
+    matched_ids = list(set([r["article_id"] for r in results if "article_id" in r]))
+    if matched_ids:
+        try:
+            db.query(Article).filter(Article.id.in_(matched_ids)).update(
+                {Article.search_hits: Article.search_hits + 1},
+                synchronize_session=False
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+
     items = [SemanticSearchResultItem(**r) for r in results]
     return Result.success(data=items)
 

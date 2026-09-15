@@ -11,7 +11,7 @@
             <span class="pulse-tag">AI Agent 就绪</span>
           </div>
           <div class="hero-text">
-            <h1 class="hero-title">欢迎来到 AI-Blog 博客论坛</h1>
+            <h1 class="hero-title">欢迎来到 AI博客论坛</h1>
             <p class="hero-desc">
               专注 <strong>AI 大模型应用开发</strong> 与 <strong>企业级软件工程架构</strong> 实战。
               本论坛所有文章均已接入自研向量知识库，配有 <strong>AI 智能体</strong>，随时为你答疑解惑！
@@ -81,6 +81,7 @@
                 </div>
 
                 <div class="card-meta">
+                  <span v-if="art.author" class="meta-item author-name-meta">✍️ {{ art.author.username || art.author.nickname }}</span>
                   <span class="meta-item">👁️ {{ art.views_count }}</span>
                   <span class="meta-item">❤️ {{ art.likes_count }}</span>
                   <button class="btn-ask-ai" @click.stop="askAiAboutArticle(art.title)">
@@ -98,28 +99,6 @@
 
         <!-- 右侧边栏 -->
         <aside class="sidebar-section">
-          <!-- 博主名片 -->
-          <div class="sidebar-card profile-card">
-            <h3 class="card-title">👨‍💻 关于博主</h3>
-            <p class="profile-bio">
-              博主 · 软件工程专业，主攻 AI 算法工程落地、大模型应用 (RAG/Agent) 与分布式系统架构。
-            </p>
-            <div class="profile-stats">
-              <div class="stat-item">
-                <span class="stat-num">{{ totalArticles }}</span>
-                <span class="stat-label">技术博文</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-num">{{ categories.length }}</span>
-                <span class="stat-label">分类专题</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-num">100%</span>
-                <span class="stat-label">向量覆盖</span>
-              </div>
-            </div>
-          </div>
-
           <!-- 热门标签云 -->
           <div class="sidebar-card tags-card">
             <h3 class="card-title">🏷️ 核心技术标签</h3>
@@ -465,38 +444,6 @@ onMounted(() => {
   font-weight: 700;
   color: #18181b;
   margin-bottom: 12px;
-}
-
-.profile-bio {
-  font-size: 0.88rem;
-  color: #52525b;
-  line-height: 1.6;
-  margin: 0 0 1rem 0;
-}
-
-.profile-stats {
-  display: flex;
-  justify-content: space-around;
-  border-top: 1px solid #f4f4f5;
-  padding-top: 12px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.stat-num {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #18181b;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 2px;
 }
 
 .tags-cloud {

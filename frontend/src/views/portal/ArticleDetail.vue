@@ -31,9 +31,20 @@
           <div class="article-author-row">
             <el-avatar :size="36" src="/bot-avatar.svg" />
             <div class="author-info">
-              <span class="author-name">{{ article.author?.nickname || '博主 (AI 算法工程师)' }}</span>
+              <span class="author-name">{{ article.author?.username || article.author?.nickname || '博主' }}</span>
               <span class="stats-text">阅读量 {{ article.views_count }} · 点赞 {{ article.likes_count }}</span>
             </div>
+
+            <!-- 作者或管理员编辑按钮 -->
+            <el-button
+              v-if="userStore.user && (article.author?.id === userStore.user.id || userStore.isAdmin)"
+              size="small"
+              type="info"
+              plain
+              @click="$router.push(`/admin/article/edit/${article.id}`)"
+            >
+              ✏️ 编辑博文
+            </el-button>
 
             <!-- 向 AI 提问按钮 -->
             <button class="btn-ask-ai-detail" @click="askAiThisArticle">

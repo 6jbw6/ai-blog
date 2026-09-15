@@ -20,6 +20,7 @@ class Article(Base):
     is_top = Column(Boolean, default=False, nullable=False, comment="是否置顶")
     views_count = Column(Integer, default=0, nullable=False, comment="浏览阅读量")
     likes_count = Column(Integer, default=0, nullable=False, comment="点赞数")
+    search_hits = Column(Integer, default=0, nullable=False, comment="搜索与检索命中热度")
     
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
     author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

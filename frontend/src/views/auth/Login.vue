@@ -9,7 +9,7 @@
               <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="#10b981" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="brand-title-text">AI-Blog · 技术中枢</span>
+          <span class="brand-title-text">AI博客论坛</span>
         </div>
       </div>
     </header>
@@ -20,7 +20,7 @@
       <section class="brand-showcase">
         <div class="brand-heading">
           <h1 class="main-hero-title">
-            欢迎来到我的博客 <span class="sparkle-icon">✦</span>
+            欢迎来到 AI 博客论坛 <span class="sparkle-icon">✦</span>
           </h1>
           <p class="main-hero-subtitle">
             企业级全栈技术栈 × RAG 智能体知识库

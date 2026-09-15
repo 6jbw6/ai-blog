@@ -29,54 +29,56 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '用户登录 - AI-Blog' }
   },
 
-  // 后台管理路由 (RBAC 权限守卫)
+  // 后台与创作者路由 (RBAC 权限守卫)
   {
     path: '/admin',
     component: () => import('@/views/admin/AdminLayout.vue'),
-    redirect: '/admin/dashboard',
-    meta: { requiresAdmin: true },
+    redirect: () => {
+      const userStore = useUserStore()
+      return userStore.isAdmin ? '/admin/dashboard' : '/admin/article/new'
+    },
     children: [
       {
         path: 'dashboard',
         name: 'AdminDashboard',
         component: () => import('@/views/admin/Dashboard.vue'),
-        meta: { title: '运营看板 - 管理后台' }
+        meta: { requiresAdmin: true, title: '运营看板 - 管理后台' }
       },
       {
         path: 'articles',
         name: 'AdminArticles',
         component: () => import('@/views/admin/ArticleList.vue'),
-        meta: { title: '文章管理 - 管理后台' }
+        meta: { requiresAdmin: true, title: '文章管理 - 管理后台' }
       },
       {
         path: 'article/new',
         name: 'AdminArticleNew',
         component: () => import('@/views/admin/ArticleEdit.vue'),
-        meta: { title: '发布博文 (AI写作) - 管理后台' }
+        meta: { title: '发布博文 (AI写作) - 创作者中心' }
       },
       {
         path: 'article/edit/:id',
         name: 'AdminArticleEdit',
         component: () => import('@/views/admin/ArticleEdit.vue'),
-        meta: { title: '编辑博文 - 管理后台' }
+        meta: { title: '编辑博文 - 创作者中心' }
       },
       {
         path: 'categories-tags',
         name: 'AdminCategoryTag',
         component: () => import('@/views/admin/CategoryTagManage.vue'),
-        meta: { title: '分类与标签运维 - 管理后台' }
+        meta: { requiresAdmin: true, title: '分类与标签运维 - 管理后台' }
       },
       {
         path: 'comments',
         name: 'AdminComments',
         component: () => import('@/views/admin/CommentManage.vue'),
-        meta: { title: '评论审核 - 管理后台' }
+        meta: { requiresAdmin: true, title: '评论审核 - 管理后台' }
       },
       {
         path: 'ai-settings',
         name: 'AdminAiSettings',
         component: () => import('@/views/admin/AiSettings.vue'),
-        meta: { title: 'AI 引擎设置 - 管理后台' }
+        meta: { requiresAdmin: true, title: 'AI 引擎设置 - 管理后台' }
       }
     ]
   },

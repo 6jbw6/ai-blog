@@ -43,6 +43,7 @@ class ArticleListItem(BaseModel):
     is_top: bool
     views_count: int
     likes_count: int
+    search_hits: int = 0
     vector_status: str
     category: Optional[CategoryOut] = None
     tags: List[TagOut] = []

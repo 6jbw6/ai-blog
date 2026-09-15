@@ -18,6 +18,32 @@ from app.ai_engine.recommendation_service import record_search_query
 router = APIRouter(prefix="/articles", tags=["文章管理 (Articles)"])
 
 
+def update_realtime_top_articles(db: Session, limit: int = 3):
+    """
+    根据搜索热度 (search_hits) 与浏览量实时计算置顶精选博文，
+    默认排名前 3 的文章自动标记为置顶 (is_top = True)，其余文章为 False。
+    """
+    try:
+        top_articles = (
+            db.query(Article.id)
+            .filter(Article.is_published == True)
+            .order_by(
+                Article.search_hits.desc(),
+                Article.views_count.desc(),
+                Article.created_at.desc()
+            )
+            .limit(limit)
+            .all()
+        )
+        top_ids = [r[0] for r in top_articles]
+        if top_ids:
+            db.query(Article).filter(Article.id.in_(top_ids)).update({"is_top": True}, synchronize_session=False)
+            db.query(Article).filter(~Article.id.in_(top_ids)).update({"is_top": False}, synchronize_session=False)
+            db.commit()
+    except Exception:
+        db.rollback()
+
+
 @router.get("", response_model=Result[PageResult[ArticleListItem]], summary="分页获取文章列表")
 def list_articles(
     page: int = Query(1, ge=1),
@@ -28,6 +54,10 @@ def list_articles(
     published_only: bool = True,
     db: Session = Depends(get_db)
 ):
+    # 首页默认状态下实时刷新置顶精选（排名前 3 的高搜索热度博文）
+    if page == 1 and not keyword and not category_id and not tag_id:
+        update_realtime_top_articles(db, limit=3)
+
     query = db.query(Article).options(
         joinedload(Article.category),
         joinedload(Article.tags),
@@ -47,6 +77,15 @@ def list_articles(
         kw = f"%{keyword}%"
         query = query.filter(or_(Article.title.like(kw), Article.summary.like(kw), Article.content.like(kw)))
         record_search_query(db, keyword, search_type="portal_search")
+        # 实时累加命中文章的搜索热度
+        matched_articles = query.all()
+        if matched_articles:
+            matched_ids = [a.id for a in matched_articles]
+            db.query(Article).filter(Article.id.in_(matched_ids)).update(
+                {Article.search_hits: Article.search_hits + 1},
+                synchronize_session=False
+            )
+            db.commit()
 
     total = query.distinct().count()
     
@@ -145,18 +184,20 @@ def get_article_detail(
     return Result.success(data=ArticleDetail.model_validate(article))
 
 
-@router.post("", response_model=Result[ArticleDetail], summary="创建文章并自动同步构建 RAG 向量切片 (管理员)")
+@router.post("", response_model=Result[ArticleDetail], summary="创建文章并自动同步构建 RAG 向量切片 (博主用户)")
 def create_article(
     payload: ArticleCreate,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
     exist = db.query(Article).filter(Article.slug == payload.slug).first()
     if exist:
         raise BusinessException("文章别名 slug 已存在，请换一个唯一英文或拼音标识", code=400)
 
     article_data = payload.model_dump(exclude={"tag_ids"})
-    article = Article(**article_data, author_id=admin.id)
+    # 新建博文点赞数初始严格为 0
+    article_data["likes_count"] = 0
+    article = Article(**article_data, author_id=current_user.id)
 
     # 关联标签
     if payload.tag_ids:
@@ -178,16 +219,20 @@ def create_article(
     return Result.success(data=ArticleDetail.model_validate(article), message="文章发布并成功录入 AI 知识库")
 
 
-@router.put("/{id}", response_model=Result[ArticleDetail], summary="更新文章与重新同步向量索引 (管理员)")
+@router.put("/{id}", response_model=Result[ArticleDetail], summary="更新文章与重新同步向量索引 (作者或管理员)")
 def update_article(
     id: int,
     payload: ArticleUpdate,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
     article = db.query(Article).filter(Article.id == id).first()
     if not article:
         raise BusinessException("文章不存在", code=404)
+
+    # 仅作者本人或系统管理员有权修改文章
+    if article.author_id != current_user.id and current_user.role != "admin":
+        raise BusinessException("您只能修改自己创作的文章", code=403)
 
     update_dict = payload.model_dump(exclude_unset=True)
     tag_ids = update_dict.pop("tag_ids", None)
@@ -213,15 +258,19 @@ def update_article(
     return Result.success(data=ArticleDetail.model_validate(article), message="文章更新并重新建立向量索引")
 
 
-@router.delete("/{id}", response_model=Result[None], summary="删除文章 (管理员)")
+@router.delete("/{id}", response_model=Result[None], summary="删除文章 (作者或管理员)")
 def delete_article(
     id: int,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
     article = db.query(Article).filter(Article.id == id).first()
     if not article:
         raise BusinessException("文章不存在", code=404)
+
+    # 仅作者本人或系统管理员有权删除文章
+    if article.author_id != current_user.id and current_user.role != "admin":
+        raise BusinessException("您只能删除自己创作的文章", code=403)
 
     db.delete(article)
     db.commit()

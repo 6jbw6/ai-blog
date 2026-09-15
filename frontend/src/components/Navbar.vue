@@ -10,7 +10,7 @@
               <path d="M12 6.5L7.8 17H10.5L12 14L13.5 17H16.2L12 6.5Z" fill="#10b981"/>
             </svg>
           </span>
-          <span class="logo-text">AI-Blog</span>
+          <span class="logo-text">AI博客论坛</span>
         </router-link>
 
         <nav class="nav-links">
@@ -19,15 +19,16 @@
         </nav>
       </div>
 
-      <!-- 右侧区域：圆角胶囊搜索框 + 控制台直连 + 用户态 -->
-      <div class="nav-right-group">
-        <!-- 胶囊搜索框（极简圆角高精度样式） -->
+      <!-- 中间区域：胶囊搜索框（自适应拉伸，填满分类与标签右侧至AI智能体左侧的全部空间） -->
+      <div class="nav-center-group">
         <div class="nav-search-capsule" @click="aiChatStore.openSearch()">
           <el-icon class="search-icon"><Search /></el-icon>
           <span class="search-placeholder">搜索博文与知识库切片...</span>
-          <kbd class="kbd-badge">Ctrl K</kbd>
         </div>
+      </div>
 
+      <!-- 右侧区域：快捷功能 + 控制台直连 + 用户态 -->
+      <div class="nav-right-group">
         <!-- 快捷功能文本链接（极客控制台风格） -->
         <div class="quick-links">
           <button class="nav-action-link btn-ai-link" @click="aiChatStore.openChat()">
@@ -67,11 +68,11 @@
                     <span>消息提醒</span>
                     <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="dropdown-badge" />
                   </el-dropdown-item>
+                  <el-dropdown-item @click="$router.push('/admin/article/new')">
+                    <el-icon><EditPen /></el-icon> 发布博文 (AI写作)
+                  </el-dropdown-item>
                   <el-dropdown-item v-if="userStore.isAdmin" divided @click="$router.push('/admin/dashboard')">
                     <el-icon><DataAnalysis /></el-icon> 运营看板
-                  </el-dropdown-item>
-                  <el-dropdown-item v-if="userStore.isAdmin" @click="$router.push('/admin/article/new')">
-                    <el-icon><EditPen /></el-icon> 发布博文 (AI写作)
                   </el-dropdown-item>
                   <el-dropdown-item divided @click="userStore.logout()">
                     退出登录
@@ -180,6 +181,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 2.25rem;
+  flex-shrink: 0;
 }
 
 .brand-logo {
@@ -222,24 +224,26 @@ onUnmounted(() => {
   color: #059669;
 }
 
-/* 右侧搜索 + 动作栏 */
-.nav-right-group {
+/* 中间区域：拉伸搜索栏（连接分类标签右侧与AI智能体左侧） */
+.nav-center-group {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  margin: 0 1.75rem;
+  min-width: 0;
 }
 
-/* 胶囊搜索栏 */
+/* 胶囊搜索栏 (自适应 100% 填满中间区域) */
 .nav-search-capsule {
-  width: 250px;
-  height: 34px;
+  width: 100%;
+  height: 38px;
   background: #ffffff;
   border: 1px solid #e4e4e7;
   border-radius: 9999px;
-  padding: 0 12px;
+  padding: 0 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -249,29 +253,27 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* 右侧动作栏 */
+.nav-right-group {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
+}
+
 .search-icon {
   color: #71717a;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .search-placeholder {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   color: #a1a1aa;
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   user-select: none;
-}
-
-.kbd-badge {
-  font-size: 0.68rem;
-  background: #f4f4f5;
-  border: 1px solid #e4e4e7;
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: #71717a;
-  font-family: inherit;
 }
 
 /* 快捷链接 */
@@ -364,7 +366,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 900px) {
-  .nav-search-capsule {
+  .nav-center-group {
     display: none;
   }
 

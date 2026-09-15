@@ -9,6 +9,14 @@
     custom-class="my-articles-modal"
   >
     <div class="articles-container">
+      <!-- 头部操作条 -->
+      <div class="articles-header-bar">
+        <span class="header-count">共创作 {{ articles.length }} 篇博文</span>
+        <el-button type="primary" size="small" @click="createNewArticle">
+          ✍️ 创作新博文 (AI 协同)
+        </el-button>
+      </div>
+
       <div v-if="loading" class="articles-loading">
         <el-skeleton :rows="4" animated />
       </div>
@@ -54,7 +62,6 @@
               查看
             </el-button>
             <el-button
-              v-if="userStore.isAdmin"
               size="small"
               type="info"
               plain
@@ -68,8 +75,8 @@
 
       <div v-else class="articles-empty">
         <el-empty description="你尚未创作发布博文">
-          <el-button v-if="userStore.isAdmin" type="primary" @click="createNewArticle">
-            立即发布博文
+          <el-button type="primary" @click="createNewArticle">
+            ✍️ 立即创作第一篇博文
           </el-button>
         </el-empty>
       </div>
@@ -80,7 +87,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
 import { getMyCreatedArticlesApi } from '@/api/article'
 
 interface CreatedArticleItem {
@@ -97,7 +103,6 @@ interface CreatedArticleItem {
 }
 
 const router = useRouter()
-const userStore = useUserStore()
 const visible = ref(false)
 const loading = ref(false)
 const articles = ref<CreatedArticleItem[]>([])
@@ -164,6 +169,21 @@ defineExpose({
   max-height: 540px;
   overflow-y: auto;
   padding: 4px 8px 12px;
+}
+
+.articles-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--el-border-color-lighter, #e4e4e7);
+}
+
+.header-count {
+  font-size: 0.85rem;
+  color: var(--el-text-color-secondary, #71717a);
+  font-weight: 500;
 }
 
 .articles-list {

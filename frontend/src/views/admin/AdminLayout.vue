@@ -5,18 +5,18 @@
       <div class="sidebar-brand">
         <span class="brand-icon">⚡</span>
         <div class="brand-info">
-          <span class="brand-name">AI-Blog</span>
-          <span class="brand-tag">管理中台</span>
+          <span class="brand-name">AI博客论坛</span>
+          <span class="brand-tag">{{ userStore.isAdmin ? '管理中台' : '创作者中心' }}</span>
         </div>
       </div>
 
       <nav class="sidebar-menu">
-        <router-link to="/admin/dashboard" class="menu-link">
+        <router-link v-if="userStore.isAdmin" to="/admin/dashboard" class="menu-link">
           <el-icon><DataAnalysis /></el-icon>
           <span>运营看板</span>
         </router-link>
 
-        <router-link to="/admin/articles" class="menu-link">
+        <router-link v-if="userStore.isAdmin" to="/admin/articles" class="menu-link">
           <el-icon><Document /></el-icon>
           <span>文章管理</span>
         </router-link>
@@ -26,17 +26,17 @@
           <span>写新博文 (AI 协同)</span>
         </router-link>
 
-        <router-link to="/admin/categories-tags" class="menu-link">
+        <router-link v-if="userStore.isAdmin" to="/admin/categories-tags" class="menu-link">
           <el-icon><Folder /></el-icon>
           <span>分类与标签</span>
         </router-link>
 
-        <router-link to="/admin/comments" class="menu-link">
+        <router-link v-if="userStore.isAdmin" to="/admin/comments" class="menu-link">
           <el-icon><ChatLineSquare /></el-icon>
           <span>评论审核</span>
         </router-link>
 
-        <router-link to="/admin/ai-settings" class="menu-link">
+        <router-link v-if="userStore.isAdmin" to="/admin/ai-settings" class="menu-link">
           <el-icon><Cpu /></el-icon>
           <span>AI 引擎与大模型设置</span>
         </router-link>
@@ -55,7 +55,7 @@
       <!-- 顶栏 -->
       <header class="admin-topbar">
         <div class="topbar-left">
-          <span class="page-current-title">企业级控制台 · 权限管理中枢</span>
+          <span class="page-current-title">{{ userStore.isAdmin ? '企业级控制台 · 权限管理中枢' : 'AI 博客论坛 · 创作者中心' }}</span>
         </div>
 
         <div class="topbar-right">
